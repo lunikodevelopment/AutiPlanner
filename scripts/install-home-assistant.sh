@@ -122,15 +122,18 @@ source_root="$repo_root/integrations/home-assistant/custom_components"
 source_component="$source_root/autiplanner"
 integration_root="$repo_root/integrations/home-assistant"
 source_card="$integration_root/www/autiplanner-card.js"
+source_icon_font="$integration_root/www/autiplanner-icons.woff2"
 
 [[ -d "$source_component" ]] || die "custom component source not found: $source_component"
 [[ -f "$source_component/manifest.json" ]] || die "manifest.json not found in $source_component"
 [[ -f "$source_card" ]] || die "Home Assistant card source not found: $source_card"
+[[ -f "$source_icon_font" ]] || die "Home Assistant icon font source not found: $source_icon_font"
 
 if ((dry_run)); then
   printf 'source: %s\n' "$source_component"
   printf 'destination: %s@%s:%s/custom_components/autiplanner\n' "$user" "$host" "$config_dir"
   printf 'card destination: %s@%s:%s/www/autiplanner-card.js\n' "$user" "$host" "$config_dir"
+  printf 'icon font destination: %s@%s:%s/www/autiplanner-icons.woff2\n' "$user" "$host" "$config_dir"
   printf 'ssh port: %s\n' "$port"
   if [[ -n "$identity_file" ]]; then
     printf 'identity file: %s\n' "$identity_file"
@@ -167,7 +170,7 @@ remote_tmp=${remote_tmp//$'\r'/}
 
 quoted_remote_tmp=$(shell_quote "$remote_tmp")
 printf 'Uploading custom component and Lovelace card...\n'
-tar --exclude='__pycache__' --exclude='*.pyc' -C "$integration_root" -czf - custom_components/autiplanner www/autiplanner-card.js | \
+tar --exclude='__pycache__' --exclude='*.pyc' -C "$integration_root" -czf - custom_components/autiplanner www/autiplanner-card.js www/autiplanner-icons.woff2 | \
   ssh "${ssh_options[@]}" "$destination" "tar -xzf - -C ${quoted_remote_tmp}"
 
 remote_install_script=$(cat <<REMOTE_SCRIPT
@@ -178,10 +181,13 @@ install_dir="\$config_dir/custom_components/autiplanner"
 backup_root="\$config_dir/.autiplanner-backups"
 card_dir="\$config_dir/www"
 card_install="\$card_dir/autiplanner-card.js"
+font_install="\$card_dir/autiplanner-icons.woff2"
 backup_dir=''
 card_backup=''
+font_backup=''
 component_installed=0
 card_installed=0
+font_installed=0
 
 rollback() {
   if [ "\$component_installed" = 1 ] && [ -e "\$install_dir" ]; then
@@ -195,6 +201,12 @@ rollback() {
   fi
   if [ -n "\$card_backup" ] && [ ! -e "\$card_install" ] && [ -e "\$card_backup" ]; then
     mv "\$card_backup" "\$card_install"
+  fi
+  if [ "\$font_installed" = 1 ] && [ -e "\$font_install" ]; then
+    rm -f "\$font_install"
+  fi
+  if [ -n "\$font_backup" ] && [ ! -e "\$font_install" ] && [ -e "\$font_backup" ]; then
+    mv "\$font_backup" "\$font_install"
   fi
   rm -rf "\$staging_dir"
 }
@@ -234,10 +246,19 @@ fi
 mv "\$staging_dir/www/autiplanner-card.js" "\$card_install"
 card_installed=1
 test -s "\$card_install"
+if [ -e "\$font_install" ]; then
+  font_backup="\$font_install.backup.\$(date -u +%Y%m%dT%H%M%SZ)"
+  mv "\$font_install" "\$font_backup"
+  printf 'icon font backup: %s\\n' "\$font_backup"
+fi
+mv "\$staging_dir/www/autiplanner-icons.woff2" "\$font_install"
+font_installed=1
+test -s "\$font_install"
 trap - EXIT
 rm -rf "\$staging_dir"
 printf 'installed: %s\\n' "\$install_dir"
 printf 'installed card: %s\\n' "\$card_install"
+printf 'installed icon font: %s\\n' "\$font_install"
 REMOTE_SCRIPT
 )
 

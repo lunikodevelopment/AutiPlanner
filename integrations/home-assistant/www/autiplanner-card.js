@@ -6,11 +6,74 @@
   const STATUS_LABELS = { pending: "Pending", completed: "Completed", missed: "Missed", skipped: "Skipped" };
   const PRIORITIES = ["must_do", "preferably", "optional"];
   const PRIORITY_LABELS = { must_do: "Must do", preferably: "Preferably", optional: "Optional" };
-  const ICON_GLYPHS = {
-    "fa:coffee": "\uf0f4", "fa:medkit": "\uf0fa", "fa:heart": "\uf004", "fa:bed": "\uf236",
-    "mdi:coffee": "☕", "mdi:pill": "💊", "mdi:heart": "♥", "mdi:sleep": "☾",
+  const ICON_CATEGORIES = [
+    ["all", "All"], ["appointments", "Appointments"], ["daily_tasks", "Daily tasks"],
+    ["health_routines", "Health & routines"], ["free_time", "Free time"], ["home_errands", "Home & errands"],
+    ["travel", "Travel"], ["social", "Social"], ["nature_weather", "Nature & weather"],
+  ];
+  const BUILT_IN_ICONS = [
+    ["mdi:calendar", "Calendar", "appointments", "date plan", "🗓️"], ["mdi:calendar-check", "Calendar check", "appointments", "appointment done", "✅"],
+    ["mdi:calendar-clock", "Calendar time", "appointments", "appointment schedule", "🕘"], ["mdi:calendar-plus", "Add to calendar", "appointments", "appointment new", "➕"],
+    ["mdi:clock-outline", "Clock", "appointments", "time schedule", "🕘"], ["mdi:alarm", "Alarm", "appointments", "reminder wake", "⏰"],
+    ["mdi:doctor", "Doctor", "appointments", "medical appointment", "🩺"], ["mdi:hospital-building", "Hospital", "appointments", "medical appointment", "🏥"],
+    ["mdi:map-marker", "Location", "appointments", "place address", "📍"], ["mdi:phone", "Phone call", "appointments", "call contact", "📞"],
+    ["mdi:email", "Email", "appointments", "mail contact", "✉️"],
+    ["mdi:check-circle", "Complete", "daily_tasks", "done task", "✅"], ["mdi:clipboard-check", "Checklist", "daily_tasks", "task todo", "📋"],
+    ["mdi:format-list-checks", "Task list", "daily_tasks", "todo routine", "☑️"], ["mdi:home", "Home", "daily_tasks", "routine place", "🏠"],
+    ["mdi:bed", "Sleep", "daily_tasks", "rest night", "🛏️"], ["mdi:shower", "Shower", "daily_tasks", "wash hygiene", "🚿"],
+    ["mdi:toilet", "Toilet", "daily_tasks", "bathroom hygiene", "🚻"], ["mdi:toothbrush", "Brush teeth", "daily_tasks", "hygiene morning", "🪥"],
+    ["mdi:food-apple", "Eat fruit", "daily_tasks", "food snack healthy", "🍎"], ["mdi:food", "Meal", "daily_tasks", "eat lunch dinner", "🍽️"],
+    ["mdi:water", "Drink water", "daily_tasks", "drink health", "💧"], ["mdi:pill", "Medicine", "health_routines", "medication health", "💊"],
+    ["mdi:walk", "Walk", "health_routines", "exercise outside", "🚶"], ["mdi:run", "Run", "health_routines", "exercise sport", "🏃"],
+    ["mdi:meditation", "Meditate", "health_routines", "calm mindfulness", "🧘"], ["mdi:heart-pulse", "Health", "health_routines", "wellbeing medical", "💗"],
+    ["mdi:gamepad-variant", "Gaming", "free_time", "play hobby", "🎮"], ["mdi:book-open-page-variant", "Read", "free_time", "book hobby", "📖"],
+    ["mdi:movie-open", "Movie", "free_time", "film watch", "🎬"], ["mdi:music", "Music", "free_time", "listen hobby", "🎵"],
+    ["mdi:palette", "Art", "free_time", "draw paint hobby", "🎨"], ["mdi:camera", "Photography", "free_time", "photo hobby", "📷"],
+    ["mdi:coffee", "Coffee", "free_time", "drink break", "☕"], ["mdi:flower", "Gardening", "free_time", "plant hobby", "🌸"],
+    ["mdi:dog", "Dog", "free_time", "pet walk", "🐶"], ["mdi:cat", "Cat", "free_time", "pet", "🐱"],
+    ["mdi:television", "Television", "free_time", "watch relax", "📺"], ["mdi:puzzle", "Puzzle", "free_time", "game hobby", "🧩"],
+    ["mdi:broom", "Clean", "home_errands", "chore tidy", "🧹"], ["mdi:washing-machine", "Laundry", "home_errands", "chore clothes", "🧺"],
+    ["mdi:vacuum", "Vacuum", "home_errands", "clean chore", "🧹"], ["mdi:trash-can", "Take out trash", "home_errands", "chore bin", "🗑️"],
+    ["mdi:cart", "Shopping", "home_errands", "groceries errand", "🛒"], ["mdi:shopping", "Shopping bag", "home_errands", "store errand", "🛍️"],
+    ["mdi:lightbulb", "Light", "home_errands", "home remember", "💡"], ["mdi:lock", "Lock", "home_errands", "door safety", "🔒"],
+    ["mdi:key", "Key", "home_errands", "door leave", "🔑"], ["mdi:tools", "Repair", "home_errands", "fix chore", "🛠️"],
+    ["mdi:car", "Car", "travel", "drive transport", "🚗"], ["mdi:bus", "Bus", "travel", "transport commute", "🚌"],
+    ["mdi:train", "Train", "travel", "transport commute", "🚆"], ["mdi:airplane", "Airplane", "travel", "flight holiday", "✈️"],
+    ["mdi:bicycle", "Bicycle", "travel", "cycle exercise", "🚲"], ["mdi:map", "Map", "travel", "route directions", "🗺️"],
+    ["mdi:gas-station", "Fuel", "travel", "car errand", "⛽"], ["mdi:briefcase", "Work", "travel", "job office", "💼"],
+    ["mdi:message", "Message", "social", "chat contact", "💬"], ["mdi:chat", "Chat", "social", "talk contact", "🗨️"],
+    ["mdi:account", "Person", "social", "people contact", "👤"], ["mdi:account-group", "Group", "social", "people family", "👥"],
+    ["mdi:heart", "Favourite", "social", "love care", "♥"], ["mdi:gift", "Gift", "social", "birthday present", "🎁"],
+    ["mdi:party-popper", "Party", "social", "celebrate event", "🎉"], ["mdi:human-greeting", "Greet", "social", "hello people", "👋"],
+    ["mdi:white-balance-sunny", "Sunny", "nature_weather", "weather day", "☀️"], ["mdi:weather-night", "Night", "nature_weather", "weather sleep", "🌙"],
+    ["mdi:weather-rainy", "Rain", "nature_weather", "weather outside", "🌧️"], ["mdi:weather-cloudy", "Cloudy", "nature_weather", "weather", "☁️"],
+    ["mdi:snowflake", "Snow", "nature_weather", "weather winter", "❄️"], ["mdi:leaf", "Nature", "nature_weather", "plant outside", "🍃"],
+    ["mdi:weather-sunset", "Sunset", "nature_weather", "evening weather", "🌇"],
+  ].map(([token, label, category, keywords, glyph]) => ({ token, label, category, keywords, glyph }));
+  const MDI_CODEPOINTS = {
+    "mdi:calendar": 0xF00ED, "mdi:calendar-check": 0xF00EF, "mdi:calendar-clock": 0xF00F0, "mdi:calendar-plus": 0xF00F3,
+    "mdi:clock-outline": 0xF0150, "mdi:alarm": 0xF0020, "mdi:doctor": 0xF0A42, "mdi:hospital-building": 0xF02E1,
+    "mdi:map-marker": 0xF034E, "mdi:phone": 0xF03F2, "mdi:email": 0xF01EE, "mdi:check-circle": 0xF05E0,
+    "mdi:clipboard-check": 0xF014E, "mdi:format-list-checks": 0xF0756, "mdi:home": 0xF02DC, "mdi:bed": 0xF02E3,
+    "mdi:shower": 0xF09A0, "mdi:toilet": 0xF09AB, "mdi:toothbrush": 0xF1129, "mdi:food-apple": 0xF025B,
+    "mdi:food": 0xF025A, "mdi:water": 0xF058C, "mdi:pill": 0xF0402, "mdi:walk": 0xF0583, "mdi:run": 0xF070E,
+    "mdi:meditation": 0xF117B, "mdi:heart-pulse": 0xF05F6, "mdi:gamepad-variant": 0xF0297, "mdi:book-open-page-variant": 0xF05DA,
+    "mdi:movie-open": 0xF0FCE, "mdi:music": 0xF075A, "mdi:palette": 0xF03D8, "mdi:camera": 0xF0100,
+    "mdi:coffee": 0xF0176, "mdi:flower": 0xF024A, "mdi:dog": 0xF0A43, "mdi:cat": 0xF011B,
+    "mdi:television": 0xF0502, "mdi:puzzle": 0xF0431, "mdi:broom": 0xF00E2, "mdi:washing-machine": 0xF072A,
+    "mdi:vacuum": 0xF19A1, "mdi:trash-can": 0xF0A79, "mdi:cart": 0xF0110, "mdi:shopping": 0xF049A,
+    "mdi:lightbulb": 0xF0335, "mdi:lock": 0xF033E, "mdi:key": 0xF0306, "mdi:tools": 0xF1064,
+    "mdi:car": 0xF010B, "mdi:bus": 0xF00E7, "mdi:train": 0xF052C, "mdi:airplane": 0xF001D,
+    "mdi:bicycle": 0xF109C, "mdi:map": 0xF034D, "mdi:gas-station": 0xF0298, "mdi:briefcase": 0xF00D6,
+    "mdi:message": 0xF0361, "mdi:chat": 0xF0B79, "mdi:account": 0xF0004, "mdi:account-group": 0xF0849,
+    "mdi:heart": 0xF02D1, "mdi:gift": 0xF0E44, "mdi:party-popper": 0xF1056, "mdi:human-greeting": 0xF17C4,
+    "mdi:white-balance-sunny": 0xF05A8, "mdi:weather-night": 0xF0594, "mdi:weather-rainy": 0xF0597, "mdi:weather-cloudy": 0xF0590,
+    "mdi:snowflake": 0xF0717, "mdi:leaf": 0xF032A, "mdi:weather-sunset": 0xF059A,
   };
+  const ICON_GLYPHS = Object.fromEntries(BUILT_IN_ICONS.map((icon) => [icon.token, String.fromCodePoint(MDI_CODEPOINTS[icon.token] || icon.glyph.codePointAt(0))]));
+  Object.assign(ICON_GLYPHS, { "fa:coffee": "\uf0f4", "fa:medkit": "\uf0fa", "fa:heart": "\uf004", "fa:bed": "\uf236", "mdi:sleep": "☾" });
   const STYLE = `
+    @font-face { font-family:"AutiPlanner MDI"; src:url("/local/autiplanner-icons.woff2") format("woff2"); font-display:block; }
     :host { display:block; color:#24231f; font:400 15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     .card { --bg:#f8f7f3; --surface:#fff; --border:#d8d5cc; --text:#24231f; --muted:#69665d; --accent:#3f6957; --on-accent:#fff; --danger:#9b4d48; overflow:hidden; background:var(--bg); border:1px solid var(--border); border-radius:12px; }
     .card[data-theme="dark"] { --bg:#252525; --surface:#30302f; --border:#4b4a46; --text:#f1f0eb; --muted:#c3c0b8; --accent:#9bc8aa; --on-accent:#17231b; --danger:#f0aaa2; }
@@ -40,8 +103,15 @@
     .add { display:grid; gap:9px; padding:14px 16px 16px; border-top:1px solid var(--border); } .add h3 { margin-bottom:2px; }
     .add-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; } label { display:grid; gap:4px; color:var(--muted); font-size:.8rem; }
     input,textarea,select { width:100%; min-height:44px; padding:8px 10px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:8px; } textarea { min-height:72px; resize:vertical; }
+    .icon-field { display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:8px; min-height:52px; padding:7px 8px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+    .icon-preview { display:grid; place-items:center; width:34px; height:34px; font-size:1.35rem; } .icon-copy { display:grid; min-width:0; gap:1px; } .icon-copy strong { font-size:.78rem; color:var(--muted); font-weight:500; } .icon-copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .icon-field button,.icon-dialog button { min-height:40px; padding:6px 10px; color:var(--text); background:transparent; border:1px solid var(--border); border-radius:8px; } .icon-field button.primary,.icon-dialog button.primary { color:var(--on-accent); background:var(--accent); border-color:var(--accent); }
+    .icon-dialog { position:fixed; inset:0; width:min(620px,calc(100% - 28px)); max-width:none; max-height:calc(100% - 28px); margin:auto; padding:0; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:0 18px 60px #0006; } .icon-dialog::backdrop { background:#0008; }
+    .icon-dialog__surface { display:grid; gap:10px; padding:16px; } .icon-dialog__header,.icon-dialog__actions { display:flex; align-items:center; justify-content:space-between; gap:8px; } .icon-dialog__header h3 { flex:1; }
+    .icon-categories { display:flex; gap:6px; overflow-x:auto; padding:2px 1px 5px; } .icon-categories button { flex:0 0 auto; min-height:38px; border-radius:999px; } .icon-categories button[aria-pressed="true"] { color:var(--on-accent); background:var(--accent); border-color:var(--accent); }
+    .icon-result-count { color:var(--muted); font-size:.78rem; } .icon-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; max-height:310px; overflow:auto; padding:1px; } .icon-option { display:grid; place-items:center; gap:3px; min-height:74px; padding:6px 4px!important; text-align:center; } .icon-option[aria-pressed="true"] { background:color-mix(in srgb,var(--accent) 15%,var(--surface)); border-color:var(--accent); } .icon-option__glyph { font-size:1.45rem; line-height:1; } .icon-option__label { overflow:hidden; max-width:100%; font-size:.72rem; text-overflow:ellipsis; white-space:nowrap; }
     .add-actions { display:flex; justify-content:flex-end; gap:8px; } .add-actions button { padding:8px 13px; color:var(--on-accent); background:var(--accent); border:1px solid var(--accent); border-radius:8px; font-weight:650; }
-    @media (max-width:520px) { .calendar { padding-inline:7px; } .day { min-height:48px; padding:5px 4px; } .add-grid { grid-template-columns:1fr; } .item button { padding-inline:8px; } }
+    @media (max-width:520px) { .calendar { padding-inline:7px; } .day { min-height:48px; padding:5px 4px; } .add-grid { grid-template-columns:1fr; } .item button { padding-inline:8px; } .icon-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .icon-field { grid-template-columns:auto 1fr auto; } .icon-field [data-icon-picker="clear"] { grid-column:2 / -1; justify-self:end; } }
     @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition-duration:.01ms!important; } }
   `;
 
@@ -53,6 +123,10 @@
       this._selectedDate = null;
       this._error = "";
       this._busy = new Set();
+      this._iconValue = "";
+      this._iconPickerOpen = false;
+      this._iconQuery = "";
+      this._iconCategory = "all";
       this.attachShadow({ mode: "open" });
     }
 
@@ -86,6 +160,7 @@
         ${renderCalendar(days, activeDate, byDate, this._month)}
         ${this._renderDetails(activeDate, items, iconFont)}
         ${this._renderAdd(activeDate)}
+        ${this._renderIconPicker()}
       </section>`;
       this._bindEvents();
     }
@@ -101,11 +176,18 @@
     _renderItem(item, iconFont) {
       const icon = item.icon ? renderIcon(item.icon) : STATUS_GLYPHS[item.outcome];
       const pending = this._busy.has(item.uid);
-      return `<div class="item ${item.outcome} ${item.priority}"><span class="item-state" aria-label="${STATUS_LABELS[item.outcome]}">${STATUS_GLYPHS[item.outcome]}</span>${item.icon ? `<span class="item-icon" style="font-family:${escapeAttr(iconFont)}" aria-hidden="true">${escapeHtml(icon)}</span>` : ""}<span class="item-copy"><span class="item-title">${escapeHtml(item.title)}</span><span class="meta">${PRIORITY_LABELS[item.priority]} · ${STATUS_LABELS[item.outcome]}${formatTime(item) ? ` · ${formatTime(item)}` : ""}</span></span>${item.outcome === "pending" ? `<button data-command="complete" data-uid="${escapeAttr(item.uid)}" ${pending ? "disabled" : ""}>${pending ? "Saving…" : "Complete"}</button>` : ""}</div>`;
+      return `<div class="item ${item.outcome} ${item.priority}"><span class="item-state" aria-label="${STATUS_LABELS[item.outcome]}">${STATUS_GLYPHS[item.outcome]}</span>${item.icon ? `<span class="item-icon" style="font-family:${escapeAttr(iconFontFor(item.icon, iconFont))}" aria-hidden="true">${escapeHtml(icon)}</span>` : ""}<span class="item-copy"><span class="item-title">${escapeHtml(item.title)}</span><span class="meta">${PRIORITY_LABELS[item.priority]} · ${STATUS_LABELS[item.outcome]}${formatTime(item) ? ` · ${formatTime(item)}` : ""}</span></span>${item.outcome === "pending" ? `<button data-command="complete" data-uid="${escapeAttr(item.uid)}" ${pending ? "disabled" : ""}>${pending ? "Saving…" : "Complete"}</button>` : ""}</div>`;
     }
 
     _renderAdd(date) {
-      return `<form class="add" data-form="add"><h3>Add routine</h3><div class="add-grid"><label>Title<input name="title" required autocomplete="off"></label><label>Date<input name="date" type="date" value="${date}" required></label><label>Day part<select name="day_part">${PERIODS.map((period) => `<option value="${period}">${PERIOD_LABELS[period]}</option>`).join("")}</select></label><label>Priority<select name="priority"><option value="must_do">Must do</option><option value="preferably" selected>Preferably</option><option value="optional">Optional</option></select></label><label>Icon token<input name="icon" placeholder="mdi:coffee or fa:coffee"></label></div><label>Description<textarea name="description"></textarea></label><div class="add-actions"><button type="submit">Add routine</button></div></form>`;
+      const icon = BUILT_IN_ICONS.find((option) => option.token === this._iconValue);
+      const iconLabel = icon?.label || (this._iconValue ? "Custom icon" : "No icon selected");
+      return `<form class="add" data-form="add"><h3>Add routine</h3><div class="add-grid"><label>Title<input name="title" required autocomplete="off"></label><label>Date<input name="date" type="date" value="${date}" required></label><label>Day part<select name="day_part">${PERIODS.map((period) => `<option value="${period}">${PERIOD_LABELS[period]}</option>`).join("")}</select></label><label>Priority<select name="priority"><option value="must_do">Must do</option><option value="preferably" selected>Preferably</option><option value="optional">Optional</option></select></label></div><div class="icon-field" aria-label="Routine icon"><input type="hidden" name="icon" value="${escapeAttr(this._iconValue)}"><span class="icon-preview" data-icon-preview style="font-family:${escapeAttr(iconFontFor(this._iconValue, "inherit"))}" aria-hidden="true">${this._iconValue ? escapeHtml(renderIcon(this._iconValue)) : "＋"}</span><span class="icon-copy"><strong>Icon</strong><span data-icon-label>${escapeHtml(iconLabel)}</span></span><button type="button" class="primary" data-icon-picker="open">Choose icon</button>${this._iconValue ? `<button type="button" data-icon-picker="clear">Clear</button>` : ""}</div><label>Description<textarea name="description"></textarea></label><div class="add-actions"><button type="submit">Add routine</button></div></form>`;
+    }
+
+    _renderIconPicker() {
+      const selected = BUILT_IN_ICONS.find((option) => option.token === this._iconValue);
+      return `<dialog class="icon-dialog" data-icon-dialog ${this._iconPickerOpen ? "open" : "hidden"} aria-labelledby="icon-dialog-title"><div class="icon-dialog__surface"><div class="icon-dialog__header"><h3 id="icon-dialog-title">Choose an icon</h3><button type="button" data-icon-picker="close" aria-label="Close icon picker">×</button></div><p class="subtitle">Built-in Material Design Icons</p><input data-icon-search type="search" value="${escapeAttr(this._iconQuery)}" placeholder="Search appointments, food, relax…" aria-label="Search icons"><div class="icon-categories" role="group" aria-label="Icon categories">${ICON_CATEGORIES.map(([value, label]) => `<button type="button" data-icon-category="${value}" aria-pressed="${this._iconCategory === value}">${label}</button>`).join("")}</div><div class="icon-result-count" data-icon-result-count>${filterBuiltInIcons(this._iconQuery, this._iconCategory).length} icons</div><div class="icon-grid" data-icon-grid>${renderIconOptions(this._iconQuery, this._iconCategory, selected?.token || this._iconValue)}</div><div class="icon-dialog__actions"><button type="button" data-icon-picker="clear">Clear icon</button><button type="button" class="primary" data-icon-picker="close">Done</button></div></div></dialog>`;
     }
 
     _bindEvents() {
@@ -123,6 +205,21 @@
       }));
       this.shadowRoot.querySelectorAll("[data-command]").forEach((button) => button.addEventListener("click", () => this._runCommand(button.dataset.command, button.dataset.uid)));
       this.shadowRoot.querySelector("[data-form=add]")?.addEventListener("submit", (event) => this._addRoutine(event));
+      this.shadowRoot.querySelectorAll("[data-icon-picker]").forEach((button) => button.addEventListener("click", () => {
+        const action = button.dataset.iconPicker;
+        if (action === "open") this._openIconPicker();
+        if (action === "close") this._closeIconPicker();
+        if (action === "clear") this._setIconValue("");
+      }));
+      this.shadowRoot.querySelector("[data-icon-search]")?.addEventListener("input", (event) => {
+        this._iconQuery = event.target.value;
+        this._updateIconPickerDom();
+      });
+      this.shadowRoot.querySelectorAll("[data-icon-category]").forEach((button) => button.addEventListener("click", () => {
+        this._iconCategory = button.dataset.iconCategory || "all";
+        this._updateIconPickerDom();
+      }));
+      this.shadowRoot.querySelectorAll("[data-icon-token]").forEach((button) => button.addEventListener("click", () => this._setIconValue(button.dataset.iconToken || "")));
     }
 
     _items() {
@@ -145,9 +242,48 @@
       this._error = "";
       try {
         await this._hass.callService("autiplanner", "add_routine", { entity_id: this._config.entity, title: data.title, date: data.date, day_part: data.day_part, priority: data.priority, icon: data.icon, description: data.description });
-        this._selectedDate = data.date; this._month = data.date.slice(0, 7);
+        this._selectedDate = data.date; this._month = data.date.slice(0, 7); this._iconValue = ""; this._iconPickerOpen = false;
       } catch (error) { this._error = error?.message || "Unable to add routine"; }
       this._render();
+    }
+
+    _openIconPicker() {
+      this._iconPickerOpen = true; this._iconQuery = ""; this._iconCategory = "all";
+      const dialog = this.shadowRoot.querySelector("[data-icon-dialog]");
+      if (dialog) {
+        dialog.hidden = false;
+        if (typeof dialog.showModal === "function") { try { dialog.showModal(); } catch { dialog.setAttribute("open", ""); } } else dialog.setAttribute("open", "");
+      }
+      this._updateIconPickerDom();
+      this.shadowRoot.querySelector("[data-icon-search]")?.focus();
+    }
+
+    _closeIconPicker() {
+      this._iconPickerOpen = false;
+      const dialog = this.shadowRoot.querySelector("[data-icon-dialog]");
+      if (dialog) { if (typeof dialog.close === "function" && dialog.open) dialog.close(); else dialog.removeAttribute("open"); dialog.hidden = true; }
+    }
+
+    _setIconValue(value) {
+      this._iconValue = value;
+      const field = this.shadowRoot.querySelector("[data-form=add]");
+      if (field) {
+        const input = field.querySelector("[name=icon]"); if (input) input.value = value;
+        const preview = field.querySelector("[data-icon-preview]"); if (preview) preview.textContent = value ? renderIcon(value) : "＋";
+        const label = field.querySelector("[data-icon-label]"); const option = BUILT_IN_ICONS.find((icon) => icon.token === value); if (label) label.textContent = option?.label || (value ? "Custom icon" : "No icon selected");
+        const clear = field.querySelector('[data-icon-picker="clear"]'); if (value && !clear) { const button = document.createElement("button"); button.type = "button"; button.dataset.iconPicker = "clear"; button.textContent = "Clear"; field.querySelector('[data-icon-picker="open"]')?.after(button); button.addEventListener("click", () => this._setIconValue("")); } else if (!value && clear) clear.remove();
+      }
+      this._updateIconPickerDom();
+      if (value) this._closeIconPicker();
+    }
+
+    _updateIconPickerDom() {
+      const grid = this.shadowRoot.querySelector("[data-icon-grid]");
+      if (grid) grid.innerHTML = renderIconOptions(this._iconQuery, this._iconCategory, this._iconValue);
+      const count = this.shadowRoot.querySelector("[data-icon-result-count]");
+      if (count) count.textContent = `${filterBuiltInIcons(this._iconQuery, this._iconCategory).length} icons`;
+      this.shadowRoot.querySelectorAll("[data-icon-category]").forEach((button) => { button.setAttribute("aria-pressed", String(button.dataset.iconCategory === this._iconCategory)); });
+      this.shadowRoot.querySelectorAll("[data-icon-token]").forEach((button) => button.addEventListener("click", () => this._setIconValue(button.dataset.iconToken || "")));
     }
   }
 
@@ -173,6 +309,19 @@
   function formatDate(value) { const date = new Date(`${value}T12:00:00Z`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined,{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"}).format(date); }
   function formatTime(item) { const match = /T(\d{2}:\d{2})/.exec(item.start || item.due || ""); return match?.[1] || ""; }
   function renderIcon(value) { return ICON_GLYPHS[String(value).toLowerCase()] || (String(value).startsWith("unicode:") ? String(value).slice(8) : String(value)); }
+  function iconFontFor(value, configuredFont) { return String(value || "").toLowerCase().startsWith("mdi:") ? "AutiPlanner MDI" : configuredFont; }
+  function filterBuiltInIcons(query, category) {
+    const normalized = String(query || "").trim().toLowerCase();
+    return BUILT_IN_ICONS.filter((icon) => {
+      const matchesCategory = category === "all" || icon.category === category;
+      const matchesQuery = !normalized || [icon.token, icon.label, icon.keywords].some((value) => String(value).toLowerCase().includes(normalized));
+      return matchesCategory && matchesQuery;
+    });
+  }
+  function renderIconOptions(query, category, selectedToken) {
+    const icons = filterBuiltInIcons(query, category);
+    return icons.length ? icons.map((icon) => `<button type="button" class="icon-option" data-icon-token="${escapeAttr(icon.token)}" aria-pressed="${icon.token === selectedToken}" aria-label="Choose ${escapeAttr(icon.label)}"><span class="icon-option__glyph" style="font-family:AutiPlanner MDI" aria-hidden="true">${escapeHtml(renderIcon(icon.token))}</span><span class="icon-option__label">${escapeHtml(icon.label)}</span></button>`).join("") : `<p class="empty">No icons match that search.</p>`;
+  }
   function priorityRank(value) { return value === "must_do" ? 0 : value === "optional" ? 2 : 1; }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char])); }
   function escapeAttr(value) { return escapeHtml(value).replace(/`/g,"&#96;"); }

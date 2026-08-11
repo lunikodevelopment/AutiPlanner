@@ -51,6 +51,7 @@ packages/
 docs/
   ARCHITECTURE.md          Source-of-truth architecture decisions
   ICS_PROFILE.md           VTODO/VEVENT profile and custom fields
+  ICON_CATALOG.md          Bundled Material Design Icons picker and token guide
   NAVET_INTEGRATION.md     How to integrate with Navet safely
   ROADMAP.md               Suggested implementation sequence
 examples/
@@ -102,6 +103,7 @@ This checkout contains working implementations rather than only planning documen
 - `integrations/home-assistant` — config flow, standard to-do/calendar entities, four-state services, atomic locked writes, explicit day-part/icon/priority create/update services, and a responsive Lovelace calendar card;
 - `apps/navet-extension` — provider-neutral capability, Home Assistant mapping, monthly calendar with ISO week numbers, accessible routine widget, responsive themes, priority legend, and fixtures;
 - `apps/android` — buildable Kotlin/Jetpack Compose app with a month calendar home, ISO week numbers, dark-mode toggle, event icons, priority colors/legend, Home Assistant REST access, polling, local cache, four-state actions, and create/edit/delete flows;
+- `apps/android` includes a bundled Material Design Icons font plus a searchable, categorized picker for appointments, daily tasks, health routines, free time, home/errands, travel, social, and nature/weather;
 - `apps/android/app/src/main/res` — a calendar/checkmark launcher icon for the Android app.
 
 The optional offline/conflict phase remains deferred until the Home Assistant-authoritative model proves insufficient.
@@ -164,7 +166,7 @@ sort_priority: true
 icon_font: "Material Design Icons"
 ```
 
-The card is the ICS-backed monthly home view: ISO week numbers, selectable days, all four periods, priority colors and legend, icon-font tokens, completion actions, and a mobile-sized add-routine form. `icon_font` may be changed to a locally loaded Font Awesome or other icon-font family; use a literal `unicode:` token when a font requires an explicit glyph code.
+The card is the ICS-backed monthly home view: ISO week numbers, selectable days, all four periods, priority colors and legend, icon-font tokens, completion actions, a mobile-sized add-routine form, and a searchable categorized icon picker. The installer also uploads the bundled Material Design Icons 7.4.47 font as `/local/autiplanner-icons.woff2`; selected built-in icons are saved as portable `mdi:*` tokens. `icon_font` can still be changed for legacy Font Awesome/custom tokens, and `unicode:` remains available when a font requires an explicit glyph code.
 
 The shorter form is also supported: `./scripts/install-home-assistant.sh 192.168.1.20 22 --user root`.
 
@@ -206,7 +208,7 @@ The debug APK is generated at `apps/android/app/build/outputs/apk/debug/app-debu
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-On first launch, enter the Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID. The app opens on a month calendar with ISO week numbers; tapping a day opens its morning, afternoon, evening, and night sections. It includes a persistent dark-mode toggle, priority-colored event cards and legend, icon-font tokens, and a calendar/checkmark launcher icon. It reads `autiplanner_items` through the Home Assistant state API, sends mutations through Home Assistant services, refreshes after writes, polls periodically, and stores the last successful normalized list in an atomic private cache. The development build stores the token in private app preferences and never logs it; a production release should use Android Keystore-backed storage.
+On first launch, enter the Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID. The app opens on a month calendar with ISO week numbers; tapping a day opens its morning, afternoon, evening, and night sections. It includes a persistent dark-mode toggle, priority-colored event cards and legend, a bundled Material Design Icons font, and a create/edit picker with live search and common-use categories. Custom `mdi:*`, Font Awesome, and Unicode tokens remain compatible. It reads `autiplanner_items` through the Home Assistant state API, sends mutations through Home Assistant services, refreshes after writes, polls periodically, and stores the last successful normalized list in an atomic private cache. The development build stores the token in private app preferences and never logs it; a production release should use Android Keystore-backed storage.
 
 ## Navet extension
 

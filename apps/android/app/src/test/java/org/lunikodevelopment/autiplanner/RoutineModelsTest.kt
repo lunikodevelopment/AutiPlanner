@@ -2,11 +2,14 @@ package org.lunikodevelopment.autiplanner
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.lunikodevelopment.autiplanner.ha.normalizeAccessToken
+import org.lunikodevelopment.autiplanner.model.IconCategory
 import org.lunikodevelopment.autiplanner.model.RoutineStatus
 import org.lunikodevelopment.autiplanner.model.RoutinePriority
 import org.lunikodevelopment.autiplanner.model.routineItemOrNull
+import org.lunikodevelopment.autiplanner.model.searchBuiltInIcons
 
 class RoutineModelsTest {
     @Test
@@ -32,5 +35,12 @@ class RoutineModelsTest {
         assertEquals(listOf(RoutineStatus.PENDING, RoutineStatus.COMPLETED, RoutineStatus.MISSED, RoutineStatus.SKIPPED), parsed.map { it?.status })
         assertNull(routineItemOrNull("bad", "Bad", "2026-08-11", "morning", "COMPLETED"))
         assertEquals(RoutinePriority.MUST_DO, parsed.first()?.priority)
+    }
+
+    @Test
+    fun searchesBuiltInIconsByUseCaseAndCategory() {
+        assertTrue(searchBuiltInIcons("appointment", IconCategory.ALL).any { it.token == "mdi:calendar-clock" })
+        assertTrue(searchBuiltInIcons("relax", IconCategory.FREE_TIME).any { it.token == "mdi:television" })
+        assertTrue(searchBuiltInIcons("calendar", IconCategory.DAILY_TASKS).isEmpty())
     }
 }

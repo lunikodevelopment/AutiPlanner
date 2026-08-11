@@ -30,7 +30,7 @@ Priority is persisted as `X-AUTIPLANNER-PRIORITY` and shown as a legend everywhe
 - yellow `preferably`;
 - red `optional`, suitable for skipping when time or energy is limited.
 
-Icons are persisted as `X-AUTIPLANNER-ICON`. Use Home Assistant/Material tokens such as `mdi:coffee`, supported Font Awesome tokens such as `fa:coffee`, or `unicode:` plus a glyph from the font configured for the card.
+Icons are persisted as `X-AUTIPLANNER-ICON`. The built-in picker uses a bundled Material Design Icons 7.4.47 font and saves portable tokens such as `mdi:calendar-clock` or `mdi:coffee`. It groups the common-use catalog into appointments, daily tasks, health/routines, free time, home/errands, travel, social, and nature/weather, with live search across labels and keywords. Supported Font Awesome tokens such as `fa:coffee` and `unicode:` values remain valid for custom fonts.
 
 ## Lovelace card
 
@@ -44,7 +44,7 @@ sort_priority: true
 icon_font: "Material Design Icons"
 ```
 
-It provides the ICS-backed monthly calendar home with ISO week numbers, selectable days, all four periods, color-coded priorities, icon tokens, completion actions, and an inline routine form. `icon_font` can name a locally loaded Font Awesome or other icon font. The SSH installer uploads this card automatically alongside the component.
+It provides the ICS-backed monthly calendar home with ISO week numbers, selectable days, all four periods, color-coded priorities, icon tokens, completion actions, and an inline routine form with a searchable categorized icon picker. The SSH installer uploads this card and `www/autiplanner-icons.woff2` automatically alongside the component. If copying manually, copy both files into `<config>/www/`; the card loads the font from `/local/autiplanner-icons.woff2`. `icon_font` can still name a locally loaded Font Awesome or other icon font for legacy/custom tokens.
 
 All mutations go through one in-process `asyncio.Lock`, write a complete calendar to a same-directory temporary file, `fsync` it, and replace the configured file atomically. A missing file is initialized as an empty VCALENDAR. Malformed or incomplete records are skipped with warnings rather than guessed into a state; service errors leave the source file untouched.
 

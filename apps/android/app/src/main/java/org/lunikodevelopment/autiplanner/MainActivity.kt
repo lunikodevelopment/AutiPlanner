@@ -17,14 +17,20 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,20 +52,29 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.lunikodevelopment.autiplanner.R as AppR
 import org.lunikodevelopment.autiplanner.data.RoutineRepository
 import org.lunikodevelopment.autiplanner.ha.HomeAssistantClient
 import org.lunikodevelopment.autiplanner.ha.HomeAssistantConfig
 import org.lunikodevelopment.autiplanner.model.DayPart
+import org.lunikodevelopment.autiplanner.model.IconCategory
 import org.lunikodevelopment.autiplanner.model.NewRoutine
 import org.lunikodevelopment.autiplanner.model.RoutineCommand
 import org.lunikodevelopment.autiplanner.model.RoutineItem
 import org.lunikodevelopment.autiplanner.model.RoutinePriority
 import org.lunikodevelopment.autiplanner.model.RoutineStatus
+import org.lunikodevelopment.autiplanner.model.builtInIcon
+import org.lunikodevelopment.autiplanner.model.builtInIconFontGlyph
+import org.lunikodevelopment.autiplanner.model.searchBuiltInIcons
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -76,6 +91,8 @@ class MainActivity : ComponentActivity() {
 }
 
 private data class SavedSettings(val baseUrl: String, val token: String, val entityId: String)
+
+private val AUTIPLANNER_ICON_FONT = FontFamily(Font(AppR.font.autiplanner_mdi))
 
 @Composable
 private fun AutiPlannerApp(context: Context) {
@@ -333,7 +350,7 @@ private fun RoutineRow(item: RoutineItem, busy: Boolean, onSelect: () -> Unit, o
     Card(onClick = onSelect, colors = CardDefaults.cardColors(containerColor = priorityContainer(item.priority)), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Open details for ${item.title}" }) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(item.status.glyph, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { contentDescription = item.status.label })
-            if (item.icon != null) Text(iconGlyph(item.icon), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { contentDescription = "Icon ${item.icon}" })
+            if (item.icon != null) Text(builtInIconFontGlyph(item.icon) ?: iconGlyph(item.icon), fontFamily = if (builtInIconFontGlyph(item.icon) != null) AUTIPLANNER_ICON_FONT else null, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { contentDescription = "Icon ${item.icon}" })
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(item.title, style = MaterialTheme.typography.titleMedium)
@@ -370,6 +387,7 @@ private fun RoutineEditorDialog(existing: RoutineItem?, date: String, onDismiss:
     var priority by rememberSaveable(existing?.uid) { mutableStateOf(existing?.priority ?: RoutinePriority.PREFERABLY) }
     var menuOpen by remember { mutableStateOf(false) }
     var priorityMenuOpen by remember { mutableStateOf(false) }
+    var iconPickerOpen by remember { mutableStateOf(false) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text(if (existing == null) "Add routine" else "Edit routine") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true)
         OutlinedTextField(description, { description = it }, label = { Text("Description") })
@@ -386,8 +404,111 @@ private fun RoutineEditorDialog(existing: RoutineItem?, date: String, onDismiss:
                 RoutinePriority.entries.forEach { option -> DropdownMenuItem(text = { Text(option.label) }, onClick = { priority = option; priorityMenuOpen = false }) }
             }
         }
-        OutlinedTextField(icon, { icon = it }, label = { Text("Icon token (mdi:coffee, fa:coffee, or Unicode)") }, singleLine = true)
+        IconPickerField(icon = icon, onChoose = { iconPickerOpen = true }, onClear = { icon = "" })
     } }, confirmButton = { Button(onClick = { onSave(title.trim(), description.trim().ifBlank { null }, editedDate.trim(), dayPart, icon.trim().ifBlank { null }, priority) }, enabled = title.isNotBlank() && editedDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+
+    if (iconPickerOpen) {
+        IconPickerDialog(
+            selectedToken = icon,
+            onSelect = { selected -> icon = selected; iconPickerOpen = false },
+            onDismiss = { iconPickerOpen = false },
+            onClear = { icon = ""; iconPickerOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun IconPickerField(icon: String, onChoose: () -> Unit, onClear: () -> Unit) {
+    val selected = builtInIcon(icon)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(
+            onClick = onChoose,
+            modifier = Modifier.weight(1f).heightIn(min = 58.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        ) {
+            Text(if (icon.isBlank()) "＋" else builtInIconFontGlyph(icon) ?: iconGlyph(icon), fontFamily = if (builtInIconFontGlyph(icon) != null) AUTIPLANNER_ICON_FONT else null, fontSize = 24.sp)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                Text("Icon", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    when {
+                        selected != null -> selected.label
+                        icon.isBlank() -> "Choose an icon"
+                        else -> "Custom icon"
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (icon.isNotBlank()) {
+            TextButton(onClick = onClear, modifier = Modifier.heightIn(min = 48.dp)) { Text("Clear") }
+        }
+    }
+}
+
+@Composable
+private fun IconPickerDialog(
+    selectedToken: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onClear: () -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf(IconCategory.ALL) }
+    val filteredIcons = searchBuiltInIcons(query, category)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose an icon") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("Material Design Icons", style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search icons") },
+                    placeholder = { Text("Try appointment, food, relax…") },
+                    singleLine = true,
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(vertical = 2.dp)) {
+                    items(IconCategory.entries.toList(), key = { it.name }) { option ->
+                        FilterChip(selected = category == option, onClick = { category = option }, label = { Text(option.label) })
+                    }
+                }
+                Text("${filteredIcons.size} icons", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxWidth().height(330.dp),
+                    contentPadding = PaddingValues(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    gridItems(filteredIcons, key = { it.token }) { option ->
+                        OutlinedButton(
+                            onClick = { onSelect(option.token) },
+                            modifier = Modifier.fillMaxWidth().height(84.dp),
+                            contentPadding = PaddingValues(4.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (selectedToken == option.token) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            ),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(builtInIconFontGlyph(option.token) ?: option.glyph, fontFamily = if (builtInIconFontGlyph(option.token) != null) AUTIPLANNER_ICON_FONT else null, fontSize = 24.sp)
+                                Text(option.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onClear) { Text("Clear icon") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 private fun readSettings(preferences: android.content.SharedPreferences): SavedSettings? {
@@ -436,7 +557,7 @@ private fun formatDate(value: String): String = runCatching { LocalDate.parse(va
 
 private fun formatTime(item: RoutineItem): String? = Regex("T(\\d{2}:\\d{2})").find(item.start ?: item.due ?: "")?.groupValues?.get(1)
 
-private fun iconGlyph(value: String): String = when (value.lowercase()) {
+private fun iconGlyph(value: String): String = builtInIcon(value)?.glyph ?: when (value.lowercase()) {
     "fa:coffee", "mdi:coffee" -> "☕"
     "fa:medkit", "mdi:pill" -> "💊"
     "fa:heart", "mdi:heart" -> "♥"

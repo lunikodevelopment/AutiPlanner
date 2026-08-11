@@ -12,6 +12,8 @@ Copy `custom_components/autiplanner` into the Home Assistant configuration direc
 
 Restart Home Assistant, then add **AutiPlanner** from Settings → Devices & services. Choose an absolute `.ics` path, an icon-font family, and the explicit day-part fallback used only for imported VTODOs without `X-AUTIPLANNER-DAYPART`.
 
+If the UI reports `Config flow could not be loaded: {"message":"Invalid handler specified"}`, verify that the complete directory is installed at `<config>/custom_components/autiplanner/`, including `config_flow.py` and `manifest.json`. Do not install the parent `integrations/home-assistant` directory or create a second nested `autiplanner` directory. Remove stale copies, restart Home Assistant, and check the first `Error occurred loading flow for integration autiplanner` traceback in Settings → System → Logs if it still fails.
+
 The integration exposes:
 
 - a standard `todo` entity for interoperable create/update/delete/reorder operations;

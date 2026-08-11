@@ -136,6 +136,8 @@ For this checkout, copy `integrations/home-assistant/custom_components/autiplann
 
 Configure an absolute `.ics` path, an integration display name, and the explicit default day part used only for imported VTODOs that lack `X-AUTIPLANNER-DAYPART`. A missing file is initialized as an empty `VCALENDAR`; malformed records are skipped with parse warnings.
 
+If Home Assistant shows `Config flow could not be loaded: {"message":"Invalid handler specified"}`, it has not registered the installed flow. Check that the files are exactly under `<config>/custom_components/autiplanner/` (not an extra nested `integrations/home-assistant` or `autiplanner` directory), remove stale duplicate copies, copy the complete component again, and restart Home Assistant. The SSH installer verifies both `manifest.json` and `config_flow.py`; if the error remains, inspect Settings → System → Logs for the first `Error occurred loading flow for integration autiplanner` traceback.
+
 The integration provides a standard `todo` entity, a standard `calendar` entity, the `autiplanner.complete`, `autiplanner.mark_missed`, `autiplanner.skip`, `autiplanner.reset`, `autiplanner.add_routine`, and `autiplanner.update_routine` services, and `autiplanner_item_updated` events containing UID, outcome, date, day part, priority, icon, and revision. Descriptions are not included in update events.
 
 All writes use one in-process lock, a same-directory temporary file, flush/fsync, restrictive file permissions, and atomic replacement.

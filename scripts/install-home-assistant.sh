@@ -208,6 +208,7 @@ fi
 mv "\$staging_dir/custom_components/autiplanner" "\$install_dir"
 component_installed=1
 test -f "\$install_dir/manifest.json"
+test -f "\$install_dir/config_flow.py"
 mkdir -p "\$card_dir"
 if [ -e "\$card_install" ]; then
   card_backup="\$card_install.backup.\$(date -u +%Y%m%dT%H%M%SZ)"

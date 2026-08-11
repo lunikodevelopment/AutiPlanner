@@ -14,6 +14,8 @@ Restart Home Assistant, then add **AutiPlanner** from Settings → Devices & ser
 
 If the UI reports `Config flow could not be loaded: {"message":"Invalid handler specified"}`, verify that the complete directory is installed at `<config>/custom_components/autiplanner/`, including `config_flow.py` and `manifest.json`. Do not install the parent `integrations/home-assistant` directory or create a second nested `autiplanner` directory. Remove stale copies, restart Home Assistant, and check the first `Error occurred loading flow for integration autiplanner` traceback in Settings → System → Logs if it still fails.
 
+The specific error `No module named 'custom_components.autiplanner.backup'` identifies an older or different installed copy; the current component does not import a `backup` module. Replace the complete directory from the `codex/publish-autiplanner` branch.
+
 The integration exposes:
 
 - a standard `todo` entity for interoperable create/update/delete/reorder operations;

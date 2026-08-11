@@ -9,11 +9,17 @@ export const ROUTINE_STATUSES = [
 ] as const;
 export type RoutineStatus = (typeof ROUTINE_STATUSES)[number];
 
+export const ROUTINE_PRIORITIES = ["must_do", "preferably", "optional"] as const;
+export type RoutinePriority = (typeof ROUTINE_PRIORITIES)[number];
+
 export interface RoutineItem {
   /** Stable calendar identity. Never derive this from the mutable title. */
   uid: string;
   title: string;
   description?: string;
+
+  /** Optional icon-font token, for example `mdi:coffee` or `fa:coffee`. */
+  icon?: string;
 
   /** Local calendar day, encoded as YYYY-MM-DD. */
   date: string;
@@ -29,6 +35,8 @@ export interface RoutineItem {
 
   /** Four-state AutiPlanner outcome. */
   status: RoutineStatus;
+  /** User-controlled urgency/color category. */
+  priority?: RoutinePriority;
   completedAt?: string;
 
   /** Optional stable ordering/template/concurrency fields. */
@@ -66,6 +74,10 @@ export function isRoutineStatus(value: string): value is RoutineStatus {
   return (ROUTINE_STATUSES as readonly string[]).includes(value);
 }
 
+export function isRoutinePriority(value: string): value is RoutinePriority {
+  return (ROUTINE_PRIORITIES as readonly string[]).includes(value);
+}
+
 export function validateRoutineItem(item: RoutineItem): readonly string[] {
   const errors: string[] = [];
 
@@ -76,6 +88,7 @@ export function validateRoutineItem(item: RoutineItem): readonly string[] {
   }
   if (!isDayPart(item.dayPart)) errors.push("dayPart must be a supported day part");
   if (!isRoutineStatus(item.status)) errors.push("status must be a supported routine status");
+  if (item.priority !== undefined && !isRoutinePriority(item.priority)) errors.push("priority must be supported");
 
   if (item.status === "completed" && !item.completedAt) {
     errors.push("completed items require completedAt");

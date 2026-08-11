@@ -11,7 +11,6 @@ import org.lunikodevelopment.autiplanner.model.toRoutineItemOrNull
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.time.Instant
 
 data class HomeAssistantConfig(
     val baseUrl: String,
@@ -29,7 +28,7 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             for (index in 0 until records.length()) {
                 records.optJSONObject(index)?.toRoutineItemOrNull()?.let(::add)
             }
-        }.sortedWith(compareBy<RoutineItem> { it.date }.thenBy { it.dayPart.ordinal }.thenBy { it.uid })
+        }.sortedWith(compareBy<RoutineItem> { it.date }.thenBy { it.dayPart.ordinal }.thenBy { it.priority.ordinal }.thenBy { it.uid })
     }
 
     suspend fun execute(command: RoutineCommand): Unit = withContext(Dispatchers.IO) {
@@ -38,33 +37,35 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             is RoutineCommand.MarkMissed -> callAutiPlanner("mark_missed", command.uid, null)
             is RoutineCommand.Skip -> callAutiPlanner("skip", command.uid, null)
             is RoutineCommand.Reset -> callAutiPlanner("reset", command.uid, null)
-            is RoutineCommand.Update -> callTodo("update_item", JSONObject().apply {
-                put("item", command.uid)
-                put("rename", command.title)
-                put("due_date", command.date)
+            is RoutineCommand.Update -> callService("autiplanner", "update_routine", JSONObject().apply {
+                put("uid", command.uid)
+                put("title", command.title)
+                put("date", command.date)
+                put("day_part", command.dayPart.name.lowercase())
                 putOptional("description", command.description)
+                putOptional("icon", command.icon)
+                put("priority", command.priority.name.lowercase())
             })
-            is RoutineCommand.Delete -> callTodo("remove_item", JSONObject().put("item", command.uid))
+            is RoutineCommand.Delete -> callService("todo", "remove_item", JSONObject().put("item", command.uid))
         }
     }
 
     suspend fun create(routine: NewRoutine): Unit = withContext(Dispatchers.IO) {
-        callTodo("add_item", JSONObject().apply {
-            put("item", routine.title)
-            put("due_date", routine.date)
+        callService("autiplanner", "add_routine", JSONObject().apply {
+            put("title", routine.title)
+            put("date", routine.date)
+            put("day_part", routine.dayPart.name.lowercase())
             putOptional("description", routine.description)
+            putOptional("icon", routine.icon)
+            put("priority", routine.priority.name.lowercase())
         })
     }
 
     private fun callAutiPlanner(service: String, uid: String, completedAt: String?) {
         callService("autiplanner", service, JSONObject().apply {
             put("uid", uid)
-            putOptional("completed_at", completedAt ?: if (service == "complete") Instant.now().toString() else null)
+            putOptional("completed_at", completedAt)
         })
-    }
-
-    private fun callTodo(service: String, data: JSONObject) {
-        callService("todo", service, data)
     }
 
     private fun callService(domain: String, service: String, data: JSONObject) {
@@ -89,7 +90,13 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             val responseCode = connection.responseCode
             val stream = if (responseCode in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (responseCode !in 200..299) throw HomeAssistantException("Home Assistant returned HTTP $responseCode")
+            if (responseCode !in 200..299) {
+                val detail = response.replace(Regex("\\s+"), " ").trim().take(240)
+                throw HomeAssistantException(
+                    if (detail.isEmpty()) "Home Assistant returned HTTP $responseCode"
+                    else "Home Assistant returned HTTP $responseCode: $detail",
+                )
+            }
             response
         } catch (error: HomeAssistantException) {
             throw error

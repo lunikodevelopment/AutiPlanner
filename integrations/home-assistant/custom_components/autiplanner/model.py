@@ -7,8 +7,10 @@ from datetime import date, datetime
 from typing import Mapping, Literal
 
 DayPart = Literal["morning", "afternoon", "evening", "night"]
+RoutinePriority = Literal["must_do", "preferably", "optional"]
 RoutineStatus = Literal["pending", "completed", "missed", "skipped"]
 DAY_PARTS: tuple[DayPart, ...] = ("morning", "afternoon", "evening", "night")
+ROUTINE_PRIORITIES: tuple[RoutinePriority, ...] = ("must_do", "preferably", "optional")
 ROUTINE_STATUSES: tuple[RoutineStatus, ...] = ("pending", "completed", "missed", "skipped")
 
 
@@ -22,6 +24,8 @@ class RoutineItem:
     day_part: DayPart
     status: RoutineStatus
     description: str | None = None
+    icon: str | None = None
+    priority: RoutinePriority | None = None
     start: datetime | None = None
     end: datetime | None = None
     due: datetime | date | None = None
@@ -65,6 +69,8 @@ def validate_item(item: RoutineItem) -> tuple[str, ...]:
         errors.append("day_part must be a supported day part")
     if item.status not in ROUTINE_STATUSES:
         errors.append("status must be a supported routine status")
+    if item.priority is not None and item.priority not in ROUTINE_PRIORITIES:
+        errors.append("priority must be supported")
     if item.status == "completed" and item.completed_at is None:
         errors.append("completed items require completed_at")
     if item.status != "completed" and item.completed_at is not None:

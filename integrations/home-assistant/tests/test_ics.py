@@ -38,6 +38,7 @@ def test_python_codec_round_trips_escaped_text_and_unknown_extensions() -> None:
             "X-AUTIPLANNER-DAYPART:MORNING",
             "X-AUTIPLANNER-OUTCOME:SKIPPED",
             "X-AUTIPLANNER-ICON:coffee",
+            "X-AUTIPLANNER-PRIORITY:MUST_DO",
             "CATEGORIES:home\\,care,important",
             "END:VTODO",
             "END:VCALENDAR",
@@ -50,7 +51,9 @@ def test_python_codec_round_trips_escaped_text_and_unknown_extensions() -> None:
     assert item.title == "Prepare, pack; leave"
     assert item.description == "First line\nSecond line"
     assert item.tags == ("home,care", "important")
-    assert item.extensions == {"X-AUTIPLANNER-ICON": "coffee"}
+    assert item.icon == "coffee"
+    assert item.priority == "must_do"
+    assert item.extensions == {}
     assert item.timezone == "Europe/Amsterdam"
 
     round_tripped = parse_calendar(serialize_calendar(parsed.items, dtstamp=item.start))

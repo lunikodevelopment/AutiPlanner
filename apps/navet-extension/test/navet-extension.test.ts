@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createHomeAssistantRoutineCapability, normalizeHomeAssistantRoutineItems } from "../src/home-assistant-provider.js";
-import { RoutinePlannerWidget } from "../src/routine-planner.js";
+import { RoutinePlannerCalendar, RoutinePlannerWidget } from "../src/routine-planner.js";
 import { routinePlannerStoryItems } from "../src/story-fixtures.js";
 
 test("the Home Assistant adapter normalizes rich attributes and ignores malformed records", async () => {
@@ -18,6 +18,8 @@ test("the Home Assistant adapter normalizes rich attributes and ignores malforme
           outcome: "pending",
           start: "2026-08-11T08:30:00+02:00",
           tags: ["care", 3],
+          icon: "mdi:coffee",
+          priority: "must_do",
           revision: 4,
         },
         { uid: "bad", title: "Missing day part", date: "2026-08-11", day_part: "noon", outcome: "pending" },
@@ -34,6 +36,8 @@ test("the Home Assistant adapter normalizes rich attributes and ignores malforme
       start: "2026-08-11T08:30:00+02:00",
       revision: 4,
       tags: ["care"],
+      icon: "mdi:coffee",
+      priority: "must_do",
     },
   ]);
 
@@ -68,4 +72,22 @@ test("the routine widget exposes all four states and accessible detail actions",
   assert.match(markup, /Complete/);
   assert.match(markup, /Morning/);
   assert.match(markup, /Afternoon/);
+});
+
+test("the calendar view exposes ISO weeks, priority legend, and selectable day details", () => {
+  const markup = renderToStaticMarkup(
+    createElement(RoutinePlannerCalendar, {
+      month: "2026-08",
+      items: routinePlannerStoryItems,
+      selectedDate: "2026-08-11",
+      onSelectDate: () => undefined,
+      onCommand: async () => undefined,
+    }),
+  );
+  assert.match(markup, /Week 32/);
+  assert.match(markup, /Must do/);
+  assert.match(markup, /Preferably/);
+  assert.match(markup, /Optional/);
+  assert.match(markup, /Morning/);
+  assert.match(markup, /Evening/);
 });

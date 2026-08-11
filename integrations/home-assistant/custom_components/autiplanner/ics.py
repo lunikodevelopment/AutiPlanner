@@ -13,7 +13,7 @@ import re
 from typing import Iterable, Mapping
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .model import DAY_PARTS, ROUTINE_STATUSES, DayPart, RoutineItem, RoutineStatus, validate_item
+from .model import DAY_PARTS, ROUTINE_PRIORITIES, ROUTINE_STATUSES, DayPart, RoutineItem, RoutineStatus, validate_item
 
 PRODID = "-//AutiPlanner//Routine Calendar//EN"
 DAY_PART_PROPERTY = "X-AUTIPLANNER-DAYPART"
@@ -21,12 +21,16 @@ OUTCOME_PROPERTY = "X-AUTIPLANNER-OUTCOME"
 ORDER_PROPERTY = "X-AUTIPLANNER-ORDER"
 ROUTINE_ID_PROPERTY = "X-AUTIPLANNER-ROUTINE-ID"
 REVISION_PROPERTY = "X-AUTIPLANNER-REVISION"
+ICON_PROPERTY = "X-AUTIPLANNER-ICON"
+PRIORITY_PROPERTY = "X-AUTIPLANNER-PRIORITY"
 KNOWN_PROPERTIES = {
     DAY_PART_PROPERTY,
     OUTCOME_PROPERTY,
     ORDER_PROPERTY,
     ROUTINE_ID_PROPERTY,
     REVISION_PROPERTY,
+    ICON_PROPERTY,
+    PRIORITY_PROPERTY,
 }
 
 
@@ -246,6 +250,10 @@ def _serialize_item(item: RoutineItem, stamp: datetime) -> list[str]:
     lines.append(f"SUMMARY:{escape_text(item.title)}")
     if item.description is not None:
         lines.append(f"DESCRIPTION:{escape_text(item.description)}")
+    if item.icon is not None:
+        lines.append(f"{ICON_PROPERTY}:{escape_text(item.icon)}")
+    if item.priority is not None:
+        lines.append(f"{PRIORITY_PROPERTY}:{item.priority.upper()}")
     lines.append(f"STATUS:{'COMPLETED' if item.status == 'completed' else 'NEEDS-ACTION'}")
     if item.status == "completed":
         if item.completed_at is None:
@@ -357,6 +365,8 @@ def _item_from_properties(
         day_part=day_part,  # type: ignore[arg-type]
         status=status,
         description=first("DESCRIPTION")[3] if first("DESCRIPTION") else None,
+        icon=first(ICON_PROPERTY)[3].strip() if first(ICON_PROPERTY) and first(ICON_PROPERTY)[3].strip() else None,
+        priority=(first(PRIORITY_PROPERTY)[3].strip().lower() if first(PRIORITY_PROPERTY) and first(PRIORITY_PROPERTY)[3].strip().lower() in ROUTINE_PRIORITIES else None),
         start=start_value[0] if start_value and isinstance(start_value[0], datetime) else None,
         due=due_value[0] if due_value else None,
         end=end_value[0] if end_value and isinstance(end_value[0], datetime) else None,

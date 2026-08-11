@@ -1,7 +1,7 @@
 {
   "domain": "autiplanner",
   "name": "AutiPlanner",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/lunikodevelopment/AutiPlanner",
   "issue_tracker": "https://github.com/lunikodevelopment/AutiPlanner/issues",
   "config_flow": true,

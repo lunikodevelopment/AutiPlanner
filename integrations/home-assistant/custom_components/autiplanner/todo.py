@@ -17,7 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import CONF_NAME, DOMAIN
+from .const import CONF_ICON_FONT, CONF_NAME, DEFAULT_ICON_FONT, DOMAIN
 from .model import RoutineItem
 from .storage import RoutineStore, StoreDuplicateUid, StoreItemNotFound, StoreValidationError
 
@@ -39,6 +39,7 @@ class AutiPlannerTodoEntity(TodoListEntity):
 
     def __init__(self, store: RoutineStore, entry: ConfigEntry) -> None:
         self._store = store
+        self._entry = entry
         self._remove_listener = None
         self._attr_name = entry.data.get(CONF_NAME, "AutiPlanner")
         self._attr_unique_id = f"{entry.entry_id}_todo"
@@ -64,11 +65,14 @@ class AutiPlannerTodoEntity(TodoListEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Expose day parts and four-state outcomes without changing HA's core model."""
         return {
+            "icon_font": self._entry.data.get(CONF_ICON_FONT, DEFAULT_ICON_FONT),
             "autiplanner_items": [
                 {
                     "uid": item.uid,
                     "title": item.title,
                     "description": item.description,
+                    "icon": item.icon,
+                    "priority": item.priority or "preferably",
                     "date": item.date,
                     "start": item.start,
                     "end": item.end,

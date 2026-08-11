@@ -99,7 +99,8 @@ Reserved names for future use:
 - `X-AUTIPLANNER-ORDER` — integer display order within a day part;
 - `X-AUTIPLANNER-ROUTINE-ID` — stable series/template identifier distinct from an occurrence UID;
 - `X-AUTIPLANNER-REVISION` — monotonic integer for optimistic concurrency;
-- `X-AUTIPLANNER-ICON` — application icon key, not an arbitrary remote URL.
+- `X-AUTIPLANNER-ICON` — application icon-font token, not an arbitrary remote URL;
+- `X-AUTIPLANNER-PRIORITY` — `MUST_DO`, `PREFERABLY`, or `OPTIONAL`, rendered green/yellow/red by clients.
 
 Do not add fields merely for visual styling when the same presentation can remain client-side.
 

@@ -63,3 +63,113 @@ reset:
       required: true
       selector:
         text:
+
+add_routine:
+  name: Add routine
+  description: Add a routine with an explicit date, day part, and optional icon-font token.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    title:
+      name: Title
+      description: Routine title.
+      required: true
+      selector:
+        text:
+    date:
+      name: Date
+      description: Local calendar date in YYYY-MM-DD format.
+      required: true
+      selector:
+        date:
+    day_part:
+      name: Day part
+      description: Explicit period for the routine.
+      required: false
+      selector:
+        select:
+          options:
+            - morning
+            - afternoon
+            - evening
+            - night
+    description:
+      name: Description
+      required: false
+      selector:
+        text:
+          multiline: true
+    icon:
+      name: Icon token
+      description: Icon-font token such as mdi:coffee, fa:coffee, or a Unicode glyph.
+      required: false
+      selector:
+        text:
+    priority:
+      name: Priority
+      description: Green must do, yellow preferably, or red optional/avoid if needed.
+      required: false
+      selector:
+        select:
+          options:
+            - must_do
+            - preferably
+            - optional
+
+update_routine:
+  name: Update routine
+  description: Update a routine's date, period, text, or icon without changing its UID.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable UID of the routine item.
+      required: true
+      selector:
+        text:
+    title:
+      name: Title
+      required: false
+      selector:
+        text:
+    date:
+      name: Date
+      required: false
+      selector:
+        date:
+    day_part:
+      name: Day part
+      required: false
+      selector:
+        select:
+          options:
+            - morning
+            - afternoon
+            - evening
+            - night
+    description:
+      name: Description
+      required: false
+      selector:
+        text:
+          multiline: true
+    icon:
+      name: Icon token
+      required: false
+      selector:
+        text:
+    priority:
+      name: Priority
+      description: Green must do, yellow preferably, or red optional/avoid if needed.
+      required: false
+      selector:
+        select:
+          options:
+            - must_do
+            - preferably
+            - optional

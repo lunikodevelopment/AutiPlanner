@@ -3,6 +3,7 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="AutiPlanner"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutiPlanner">

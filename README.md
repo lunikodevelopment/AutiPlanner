@@ -7,6 +7,8 @@ AutiPlanner is an accessibility-first routine planner designed around day-part p
 - Model routines as interoperable iCalendar `VTODO`/`VEVENT` data rather than a proprietary calendar format.
 - Preserve AutiPlanner-specific metadata through standard `X-AUTIPLANNER-*` extension properties.
 - Make task state explicit: pending, completed, missed, or skipped.
+- Let each routine carry a visible priority: green `must_do`, yellow `preferably`, or red `optional`.
+- Keep icon-font tokens and explicit day parts in the shared calendar data so every client presents the same routine.
 - Keep Home Assistant as the synchronization/API boundary so Android and dashboard clients do not race to edit the same `.ics` file.
 - Provide a provider-neutral core model that can be mapped into Navet without leaking Home Assistant payloads into shared UI code.
 - Keep the project easy for Codex and other coding agents to extend incrementally.
@@ -64,6 +66,7 @@ A routine item belongs to a day and a day part and has an explicit outcome:
 ```ts
 type DayPart = "morning" | "afternoon" | "evening" | "night";
 type RoutineStatus = "pending" | "completed" | "missed" | "skipped";
+type RoutinePriority = "must_do" | "preferably" | "optional";
 ```
 
 The canonical persisted representation uses iCalendar tasks where possible:
@@ -82,15 +85,24 @@ END:VTODO
 
 See [`docs/ICS_PROFILE.md`](docs/ICS_PROFILE.md) for the full profile.
 
+Priority is stored as `X-AUTIPLANNER-PRIORITY` and is intentionally separate from outcome and day part:
+
+- green — `must_do`;
+- yellow — `preferably`;
+- red — `optional` (safe to avoid when time or energy is limited).
+
+Icons are stored as `X-AUTIPLANNER-ICON`. Values may be a Home Assistant/Material token such as `mdi:coffee`, a supported Font Awesome token such as `fa:coffee`, or a literal/custom-font glyph token such as `unicode:☕`.
+
 ## Current implementation status
 
 This checkout contains working implementations rather than only planning documents:
 
 - `packages/core` — provider-neutral contracts, validation, bounded recurrence, templates, and deterministic occurrence identity;
-- `packages/ics` — VTODO parsing/serialization, UTF-8 line folding, TEXT escaping, malformed-record warnings, recurrence fields, and round-trip tests;
-- `integrations/home-assistant` — config flow, standard to-do/calendar entities, four-state services, atomic locked writes, reload behavior, and update events;
-- `apps/navet-extension` — provider-neutral capability, Home Assistant mapping, accessible routine widget, responsive themes, and fixtures;
-- `apps/android` — buildable Kotlin/Jetpack Compose app with Home Assistant REST access, polling, local cache, date navigation, four-state actions, and create/edit/delete flows.
+- `packages/ics` — VTODO parsing/serialization, UTF-8 line folding, TEXT escaping, malformed-record warnings, recurrence fields, icon/priority metadata, and round-trip tests;
+- `integrations/home-assistant` — config flow, standard to-do/calendar entities, four-state services, atomic locked writes, explicit day-part/icon/priority create/update services, and a responsive Lovelace calendar card;
+- `apps/navet-extension` — provider-neutral capability, Home Assistant mapping, monthly calendar with ISO week numbers, accessible routine widget, responsive themes, priority legend, and fixtures;
+- `apps/android` — buildable Kotlin/Jetpack Compose app with a month calendar home, ISO week numbers, dark-mode toggle, event icons, priority colors/legend, Home Assistant REST access, polling, local cache, four-state actions, and create/edit/delete flows;
+- `apps/android/app/src/main/res` — a calendar/checkmark launcher icon for the Android app.
 
 The optional offline/conflict phase remains deferred until the Home Assistant-authoritative model proves insufficient.
 
@@ -124,11 +136,11 @@ For this checkout, copy `integrations/home-assistant/custom_components/autiplann
 
 Configure an absolute `.ics` path, an integration display name, and the explicit default day part used only for imported VTODOs that lack `X-AUTIPLANNER-DAYPART`. A missing file is initialized as an empty `VCALENDAR`; malformed records are skipped with parse warnings.
 
-The integration provides a standard `todo` entity, a standard `calendar` entity, the `autiplanner.complete`, `autiplanner.mark_missed`, `autiplanner.skip`, and `autiplanner.reset` services, and `autiplanner_item_updated` events containing UID, outcome, day part, and revision. Descriptions are not included in update events.
+The integration provides a standard `todo` entity, a standard `calendar` entity, the `autiplanner.complete`, `autiplanner.mark_missed`, `autiplanner.skip`, `autiplanner.reset`, `autiplanner.add_routine`, and `autiplanner.update_routine` services, and `autiplanner_item_updated` events containing UID, outcome, date, day part, priority, icon, and revision. Descriptions are not included in update events.
 
 All writes use one in-process lock, a same-directory temporary file, flush/fsync, restrictive file permissions, and atomic replacement.
 
-For repeatable remote installs, use [`scripts/install-home-assistant.sh`](scripts/install-home-assistant.sh). It accepts an SSH host/IP and port, uploads only the custom component, backs up any existing component, verifies the manifest, and does not restart Home Assistant unless explicitly requested:
+For repeatable remote installs, use [`scripts/install-home-assistant.sh`](scripts/install-home-assistant.sh). It accepts an SSH host/IP and port, uploads the custom component and Lovelace card, backs up existing copies, verifies the manifest/card, and does not restart Home Assistant unless explicitly requested:
 
 ```bash
 ./scripts/install-home-assistant.sh \
@@ -137,6 +149,18 @@ For repeatable remote installs, use [`scripts/install-home-assistant.sh`](script
   --user root \
   --identity-file ~/.ssh/id_ed25519
 ```
+
+The installer also uploads [`integrations/home-assistant/www/autiplanner-card.js`](integrations/home-assistant/www/autiplanner-card.js) to `<config>/www/`. Register the card once in Home Assistant under Settings → Dashboards → Resources as a JavaScript module with URL `/local/autiplanner-card.js`, then add:
+
+```yaml
+type: custom:autiplanner-card
+entity: todo.autiplanner
+theme: system
+sort_priority: true
+icon_font: "Material Design Icons"
+```
+
+The card is the ICS-backed monthly home view: ISO week numbers, selectable days, all four periods, priority colors and legend, icon-font tokens, completion actions, and a mobile-sized add-routine form. `icon_font` may be changed to a locally loaded Font Awesome or other icon-font family; use a literal `unicode:` token when a font requires an explicit glyph code.
 
 The shorter form is also supported: `./scripts/install-home-assistant.sh 192.168.1.20 22 --user root`.
 
@@ -178,13 +202,13 @@ The debug APK is generated at `apps/android/app/build/outputs/apk/debug/app-debu
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-On first launch, enter the Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID. The app reads `autiplanner_items` through the Home Assistant state API, sends mutations through Home Assistant services, refreshes after writes, polls periodically, and stores the last successful normalized list in an atomic private cache. The development build stores the token in private app preferences and never logs it; a production release should use Android Keystore-backed storage.
+On first launch, enter the Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID. The app opens on a month calendar with ISO week numbers; tapping a day opens its morning, afternoon, evening, and night sections. It includes a persistent dark-mode toggle, priority-colored event cards and legend, icon-font tokens, and a calendar/checkmark launcher icon. It reads `autiplanner_items` through the Home Assistant state API, sends mutations through Home Assistant services, refreshes after writes, polls periodically, and stores the last successful normalized list in an atomic private cache. The development build stores the token in private app preferences and never logs it; a production release should use Android Keystore-backed storage.
 
 ## Navet extension
 
 `apps/navet-extension` is an AutiPlanner-owned patch surface; Navet itself is not vendored here. Its provider-neutral widget consumes normalized routine items and generic commands. The Home Assistant mapping is isolated in `src/home-assistant-provider.ts`; the widget does not parse ICS or issue raw service payloads.
 
-It renders visible `○`, `✓`, `✕`, and `—` states, supports primary completion and detail actions, provides keyboard/focus semantics, and includes responsive light, dark, black, and glass preview themes. A Navet fork should connect it to Navet's existing primitives and theme helpers.
+It renders a monthly calendar with ISO week numbers, selectable day details divided into morning, afternoon, evening, and night, visible `○`, `✓`, `✕`, and `—` states, priority colors with a legend, icon-font tokens, primary completion and detail actions, keyboard/focus semantics, and responsive light, dark, black, and glass preview themes. A Navet fork should connect it to Navet's existing primitives and theme helpers.
 
 ```bash
 pnpm --filter @autiplanner/navet-extension typecheck
@@ -198,9 +222,10 @@ See [`docs/NAVET_INTEGRATION.md`](docs/NAVET_INTEGRATION.md) for the provider bo
 ```ts
 type DayPart = "morning" | "afternoon" | "evening" | "night";
 type RoutineStatus = "pending" | "completed" | "missed" | "skipped";
+type RoutinePriority = "must_do" | "preferably" | "optional";
 ```
 
-Recurring masters remain pending; completion belongs to an occurrence override. Recurrence uses standard `RRULE`, `RDATE`, `EXDATE`, and `RECURRENCE-ID` fields. `packages/core` exposes `routineTemplateToMaster`, `occurrenceUid`, and `expandRoutineItem`. Expansion requires an explicit `from`/`to` window and defaults to a 1,000-occurrence safety cap. The current bounded generator supports `DAILY`, `WEEKLY`, and `MONTHLY` rules with `COUNT`, `UNTIL`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `RDATE`, and `EXDATE`; unsupported frequencies fail loudly.
+Recurring masters remain pending; completion belongs to an occurrence override. Recurrence uses standard `RRULE`, `RDATE`, `EXDATE`, and `RECURRENCE-ID` fields. `packages/core` exposes `routineTemplateToMaster`, `occurrenceUid`, and `expandRoutineItem`. Expansion requires an explicit `from`/`to` window and defaults to a 1,000-occurrence safety cap. The current bounded generator supports `DAILY`, `WEEKLY`, and `MONTHLY` rules with `COUNT`, `UNTIL`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `RDATE`, and `EXDATE`; unsupported frequencies fail loudly. Icon and priority metadata round-trip through `X-AUTIPLANNER-ICON` and `X-AUTIPLANNER-PRIORITY`.
 
 See [`docs/ICS_PROFILE.md`](docs/ICS_PROFILE.md) for the complete VTODO profile and malformed-record behavior.
 

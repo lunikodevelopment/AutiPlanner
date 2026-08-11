@@ -1,5 +1,5 @@
-import type { DayPart, RoutineItem, RoutineStatus } from "@autiplanner/core";
-import { isDayPart, isRoutineStatus, validateRoutineItem } from "@autiplanner/core";
+import type { DayPart, RoutineItem, RoutinePriority, RoutineStatus } from "@autiplanner/core";
+import { isDayPart, isRoutinePriority, isRoutineStatus, validateRoutineItem } from "@autiplanner/core";
 import type { RoutineCapability, RoutineCommand } from "./capability.js";
 
 export interface HomeAssistantTodoState {
@@ -25,6 +25,8 @@ interface HomeAssistantRoutineRecord {
   day_part: string;
   outcome: string;
   description?: unknown;
+  icon?: unknown;
+  priority?: unknown;
   start?: unknown;
   end?: unknown;
   due?: unknown;
@@ -75,6 +77,8 @@ function normalizeRecord(value: unknown): RoutineItem | null {
     status: record.outcome as RoutineStatus,
   };
   assignOptionalString(item, "description", record.description);
+  assignOptionalString(item, "icon", record.icon);
+  if (typeof record.priority === "string" && isRoutinePriority(record.priority)) item.priority = record.priority as RoutinePriority;
   assignOptionalString(item, "start", record.start);
   assignOptionalString(item, "end", record.end);
   assignOptionalString(item, "due", record.due);
@@ -100,7 +104,7 @@ function normalizeRecord(value: unknown): RoutineItem | null {
 
 function assignOptionalString(
   item: RoutineItem,
-  key: "description" | "start" | "end" | "due" | "timezone" | "completedAt" | "routineId",
+  key: "description" | "icon" | "start" | "end" | "due" | "timezone" | "completedAt" | "routineId",
   value: unknown,
 ): void {
   if (typeof value === "string" && value.length > 0) item[key] = value;

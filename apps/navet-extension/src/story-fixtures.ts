@@ -9,6 +9,8 @@ export const routinePlannerStoryItems: readonly RoutineItem[] = [
     start: "2026-08-11T08:00:00+02:00",
     dayPart: "morning",
     status: "completed",
+    priority: "must_do",
+    icon: "mdi:pill",
     completedAt: "2026-08-11T08:05:00+02:00",
     order: 10,
   },
@@ -19,6 +21,8 @@ export const routinePlannerStoryItems: readonly RoutineItem[] = [
     start: "2026-08-11T08:30:00+02:00",
     dayPart: "morning",
     status: "pending",
+    priority: "preferably",
+    icon: "mdi:coffee",
     order: 20,
   },
   {
@@ -28,6 +32,7 @@ export const routinePlannerStoryItems: readonly RoutineItem[] = [
     start: "2026-08-11T13:30:00+02:00",
     dayPart: "afternoon",
     status: "missed",
+    priority: "must_do",
     order: 10,
   },
   {
@@ -37,6 +42,7 @@ export const routinePlannerStoryItems: readonly RoutineItem[] = [
     start: "2026-08-11T20:00:00+02:00",
     dayPart: "evening",
     status: "skipped",
+    priority: "optional",
     order: 10,
   },
 ];

@@ -52,6 +52,8 @@ test("edge-case text, tags, timezone, and unknown extensions survive a round tri
     uid: "edge-case-20260811@autiplanner.local",
     title: "Prepare, pack; leave",
     description: "First line\nSecond line",
+    icon: "coffee",
+    priority: "must_do",
     date: "2026-08-11",
     start: "2026-08-11T08:30:00",
     due: "2026-08-11T09:00:00",
@@ -59,7 +61,6 @@ test("edge-case text, tags, timezone, and unknown extensions survive a round tri
     dayPart: "morning",
     status: "skipped",
     tags: ["home,care", "important"],
-    extensions: { "X-AUTIPLANNER-ICON": "coffee" },
   });
 
   const serialized = serializeCalendar(parsed.items, { dtstamp: "2026-08-11T06:00:00Z" });

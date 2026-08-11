@@ -20,6 +20,9 @@
     "status": {
       "enum": ["pending", "completed", "missed", "skipped"]
     },
+    "priority": {
+      "enum": ["must_do", "preferably", "optional"]
+    },
     "completedAt": { "type": "string", "format": "date-time" },
     "order": { "type": "integer" },
     "routineId": { "type": "string", "minLength": 1 },

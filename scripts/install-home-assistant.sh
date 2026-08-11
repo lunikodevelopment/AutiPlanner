@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Install the AutiPlanner Home Assistant custom component over SSH.
+Install the AutiPlanner Home Assistant custom component and Lovelace card over SSH.
 
 Usage:
   scripts/install-home-assistant.sh --host HOST --port PORT [options]
@@ -28,8 +28,8 @@ Examples:
   scripts/install-home-assistant.sh --host ha.local --port 22 \
     --restart-command 'ha core restart'
 
-The script does not delete an existing component. It moves it to a timestamped
-backup directory before installing the new copy. Restarting Home Assistant is
+The script does not delete an existing component or card. It moves each to a
+timestamped backup before installing the new copy. Restarting Home Assistant is
 disabled unless --restart-command is explicitly supplied.
 USAGE
 }
@@ -120,13 +120,17 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "$script_dir/.." && pwd)
 source_root="$repo_root/integrations/home-assistant/custom_components"
 source_component="$source_root/autiplanner"
+integration_root="$repo_root/integrations/home-assistant"
+source_card="$integration_root/www/autiplanner-card.js"
 
 [[ -d "$source_component" ]] || die "custom component source not found: $source_component"
 [[ -f "$source_component/manifest.json" ]] || die "manifest.json not found in $source_component"
+[[ -f "$source_card" ]] || die "Home Assistant card source not found: $source_card"
 
 if ((dry_run)); then
   printf 'source: %s\n' "$source_component"
   printf 'destination: %s@%s:%s/custom_components/autiplanner\n' "$user" "$host" "$config_dir"
+  printf 'card destination: %s@%s:%s/www/autiplanner-card.js\n' "$user" "$host" "$config_dir"
   printf 'ssh port: %s\n' "$port"
   if [[ -n "$identity_file" ]]; then
     printf 'identity file: %s\n' "$identity_file"
@@ -162,8 +166,8 @@ remote_tmp=${remote_tmp//$'\r'/}
 [[ -n "$remote_tmp" ]] || die 'remote staging directory was not returned'
 
 quoted_remote_tmp=$(shell_quote "$remote_tmp")
-printf 'Uploading custom component...\n'
-tar -C "$source_root" -czf - autiplanner | \
+printf 'Uploading custom component and Lovelace card...\n'
+tar --exclude='__pycache__' --exclude='*.pyc' -C "$integration_root" -czf - custom_components/autiplanner www/autiplanner-card.js | \
   ssh "${ssh_options[@]}" "$destination" "tar -xzf - -C ${quoted_remote_tmp}"
 
 remote_install_script=$(cat <<REMOTE_SCRIPT
@@ -171,11 +175,25 @@ set -eu
 config_dir=${quoted_config_dir}
 staging_dir=${quoted_remote_tmp}
 install_dir="\$config_dir/custom_components/autiplanner"
+card_dir="\$config_dir/www"
+card_install="\$card_dir/autiplanner-card.js"
 backup_dir=''
+card_backup=''
+component_installed=0
+card_installed=0
 
 rollback() {
+  if [ "\$component_installed" = 1 ] && [ -e "\$install_dir" ]; then
+    rm -rf "\$install_dir"
+  fi
   if [ -n "\$backup_dir" ] && [ ! -e "\$install_dir" ] && [ -e "\$backup_dir" ]; then
     mv "\$backup_dir" "\$install_dir"
+  fi
+  if [ "\$card_installed" = 1 ] && [ -e "\$card_install" ]; then
+    rm -f "\$card_install"
+  fi
+  if [ -n "\$card_backup" ] && [ ! -e "\$card_install" ] && [ -e "\$card_backup" ]; then
+    mv "\$card_backup" "\$card_install"
   fi
   rm -rf "\$staging_dir"
 }
@@ -187,11 +205,22 @@ if [ -e "\$install_dir" ]; then
   mv "\$install_dir" "\$backup_dir"
   printf 'backup: %s\\n' "\$backup_dir"
 fi
-mv "\$staging_dir/autiplanner" "\$install_dir"
+mv "\$staging_dir/custom_components/autiplanner" "\$install_dir"
+component_installed=1
 test -f "\$install_dir/manifest.json"
+mkdir -p "\$card_dir"
+if [ -e "\$card_install" ]; then
+  card_backup="\$card_install.backup.\$(date -u +%Y%m%dT%H%M%SZ)"
+  mv "\$card_install" "\$card_backup"
+  printf 'card backup: %s\\n' "\$card_backup"
+fi
+mv "\$staging_dir/www/autiplanner-card.js" "\$card_install"
+card_installed=1
+test -s "\$card_install"
 trap - EXIT
 rm -rf "\$staging_dir"
 printf 'installed: %s\\n' "\$install_dir"
+printf 'installed card: %s\\n' "\$card_install"
 REMOTE_SCRIPT
 )
 

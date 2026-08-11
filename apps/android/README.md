@@ -9,7 +9,7 @@ The first connection strategy is deliberately small and inspectable:
 - configure a Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID;
 - read normalized `autiplanner_items` through `GET /api/states/{entity_id}`;
 - send status changes through `POST /api/services/autiplanner/{service}`;
-- send create/edit/delete through Home Assistant's standard `todo` services;
+- send create/edit/delete through Home Assistant services, including explicit day-part/icon/priority fields;
 - refresh after every mutation and poll periodically so the Home Assistant state remains authoritative;
 - keep the last successful normalized item list in an atomic local cache for read resilience.
 
@@ -19,10 +19,12 @@ The token is kept in the app's private preferences for this first scaffold and i
 
 - Kotlin + Jetpack Compose;
 - Home Assistant-backed authentication/data connection;
-- date navigation;
+- a month calendar home with ISO week numbers and selectable days;
 - sections for morning, afternoon, evening, and night;
+- a persistent dark-mode toggle;
+- event icons and a green/yellow/red priority legend (`must_do`, `preferably`, `optional`);
 - explicit pending/completed/missed/skipped controls;
-- create/edit/delete routine items;
+- create/edit/delete routine items with explicit day part, icon token, and priority;
 - TalkBack labels for all state controls;
 - font scaling/dynamic type support;
 - large touch targets;
@@ -54,4 +56,6 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-The generated debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. The UI includes loading, error, empty, all four outcome states, date navigation, detail actions, and create/edit/delete flows with TalkBack labels and 44–48 dp touch targets.
+The generated debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. The UI includes loading, error, empty, all four outcome states, month/week/day navigation, day-part details, priority colors and legend, event icons, a dark-mode toggle, detail actions, and create/edit/delete flows with TalkBack labels and 44–48 dp touch targets.
+
+Completion calls use `autiplanner.complete` without forcing a client-supplied timestamp; Home Assistant assigns the completion time. This avoids strict REST service-schema 400 errors while still accepting an explicit timestamp from other clients.

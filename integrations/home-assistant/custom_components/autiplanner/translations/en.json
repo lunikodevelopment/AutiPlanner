@@ -4,11 +4,12 @@
     "step": {
       "user": {
         "title": "Configure AutiPlanner",
-        "description": "Choose the local iCalendar file that Home Assistant will own and the explicit day-part fallback for imported tasks.",
+        "description": "Choose the local iCalendar file that Home Assistant will own, the imported-task day-part fallback, and the icon font used by the calendar card.",
         "data": {
           "name": "Name",
           "path": "ICS file path",
-          "default_day_part": "Default day part for imported tasks"
+          "default_day_part": "Default day part for imported tasks",
+          "icon_font": "Icon font family for the calendar card"
         }
       }
     },

@@ -10,8 +10,10 @@ import {
   AUTIPLANNER_PRODID,
   DAY_PART_TO_ICS,
   ICS_DAY_PART_PROPERTY,
-  ICS_ORDER_PROPERTY,
+  ICS_ICON_PROPERTY,
   ICS_OUTCOME_PROPERTY,
+  ICS_ORDER_PROPERTY,
+  ICS_PRIORITY_PROPERTY,
   ICS_REVISION_PROPERTY,
   ICS_ROUTINE_ID_PROPERTY,
   STATUS_TO_ICS_OUTCOME,
@@ -24,6 +26,8 @@ const KNOWN_AUTIPLANNER_PROPERTIES = new Set([
   ICS_DAY_PART_PROPERTY,
   ICS_OUTCOME_PROPERTY,
   ICS_ORDER_PROPERTY,
+  ICS_ICON_PROPERTY,
+  ICS_PRIORITY_PROPERTY,
   ICS_ROUTINE_ID_PROPERTY,
   ICS_REVISION_PROPERTY,
 ]);
@@ -371,6 +375,8 @@ function serializeVtodo(item: RoutineItem, dtstamp: string): readonly string[] {
 
   lines.push(`SUMMARY:${escapeText(item.title)}`);
   if (item.description !== undefined) lines.push(`DESCRIPTION:${escapeText(item.description)}`);
+  if (item.icon !== undefined) lines.push(`${ICS_ICON_PROPERTY}:${escapeText(item.icon)}`);
+  if (item.priority !== undefined) lines.push(`${ICS_PRIORITY_PROPERTY}:${item.priority.toUpperCase()}`);
   lines.push(`STATUS:${STATUS_TO_VTODO_STATUS[item.status]}`);
   if (item.status === "completed") {
     if (item.completedAt === undefined) {
@@ -631,6 +637,13 @@ function routineItemFromProperties(
 
   const descriptionProperty = firstProperty(properties, "DESCRIPTION");
   if (descriptionProperty !== undefined) item.description = descriptionProperty.value;
+  const iconProperty = firstProperty(properties, ICS_ICON_PROPERTY);
+  if (iconProperty !== undefined && iconProperty.value.trim()) item.icon = iconProperty.value.trim();
+  const priorityProperty = firstProperty(properties, ICS_PRIORITY_PROPERTY);
+  if (priorityProperty !== undefined) {
+    const priority = priorityProperty.value.trim().toLowerCase();
+    if (priority === "must_do" || priority === "preferably" || priority === "optional") item.priority = priority;
+  }
 
   const timezone = firstTimezone(start, due, end);
   if (timezone !== undefined) item.timezone = timezone;

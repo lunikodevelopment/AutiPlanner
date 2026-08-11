@@ -87,7 +87,7 @@ class AutiPlannerCalendarEntity(CalendarEntity):
             return CalendarEvent(
                 start=start_day,
                 end=start_day + timedelta(days=1),
-                summary=item.title,
+                summary=_calendar_summary(item),
                 description=item.description,
                 uid=item.uid,
             )
@@ -101,7 +101,7 @@ class AutiPlannerCalendarEntity(CalendarEntity):
         return CalendarEvent(
             start=start,
             end=end,
-            summary=item.title,
+            summary=_calendar_summary(item),
             description=item.description,
             uid=item.uid,
         )
@@ -143,3 +143,20 @@ def _event_sort_key(event: CalendarEvent):
     if isinstance(event.start, datetime):
         return event.start
     return datetime.combine(event.start, datetime.min.time(), tzinfo=timezone.utc)
+
+
+def _calendar_summary(item: RoutineItem) -> str:
+    """Keep icon metadata visible in Home Assistant's standard calendar view."""
+    if not item.icon:
+        return item.title
+    icon = {
+        "mdi:coffee": "☕",
+        "mdi:pill": "💊",
+        "mdi:heart": "♥",
+        "mdi:sleep": "☾",
+        "fa:coffee": "☕",
+        "fa:medkit": "💊",
+        "fa:heart": "♥",
+        "fa:bed": "☾",
+    }.get(item.icon.lower(), item.icon.removeprefix("unicode:"))
+    return f"{icon} {item.title}"

@@ -13,6 +13,8 @@ AutiPlanner presents a date-oriented routine as named day parts containing actio
 
 These states are domain data, not merely UI decoration.
 
+Each item may also carry a user-controlled priority independent of outcome and day part: `must_do` (green), `preferably` (yellow), or `optional` (red). Clients sort by this order within a selected day while preserving the four outcome states.
+
 ## 2. Components
 
 ### `packages/core`

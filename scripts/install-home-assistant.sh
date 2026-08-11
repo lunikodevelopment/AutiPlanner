@@ -175,6 +175,7 @@ set -eu
 config_dir=${quoted_config_dir}
 staging_dir=${quoted_remote_tmp}
 install_dir="\$config_dir/custom_components/autiplanner"
+backup_root="\$config_dir/.autiplanner-backups"
 card_dir="\$config_dir/www"
 card_install="\$card_dir/autiplanner-card.js"
 backup_dir=''
@@ -199,12 +200,20 @@ rollback() {
 }
 trap rollback EXIT
 
-mkdir -p "\$config_dir/custom_components"
+mkdir -p "\$config_dir/custom_components" "\$backup_root"
 if [ -e "\$install_dir" ]; then
-  backup_dir="\$install_dir.backup.\$(date -u +%Y%m%dT%H%M%SZ)"
+  backup_dir="\$backup_root/autiplanner-\$(date -u +%Y%m%dT%H%M%SZ)"
   mv "\$install_dir" "\$backup_dir"
   printf 'backup: %s\\n' "\$backup_dir"
 fi
+# Older installer versions left dotted backup directories under
+# custom_components, where Home Assistant discovers them as Python packages.
+for legacy_backup in "\$config_dir"/custom_components/autiplanner.backup.*; do
+  if [ -e "\$legacy_backup" ]; then
+    mv "\$legacy_backup" "\$backup_root/"
+    printf 'migrated legacy backup: %s\\n' "\$legacy_backup"
+  fi
+done
 mv "\$staging_dir/custom_components/autiplanner" "\$install_dir"
 component_installed=1
 test -f "\$install_dir/manifest.json"

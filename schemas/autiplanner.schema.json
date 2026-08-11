@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autiplanner.local/schemas/autiplanner.schema.json",
+  "title": "AutiPlanner Routine Item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["uid", "title", "date", "dayPart", "status"],
+  "properties": {
+    "uid": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "start": { "type": "string", "format": "date-time" },
+    "end": { "type": "string", "format": "date-time" },
+    "due": { "type": "string", "format": "date-time" },
+    "timezone": { "type": "string", "minLength": 1 },
+    "dayPart": {
+      "enum": ["morning", "afternoon", "evening", "night"]
+    },
+    "status": {
+      "enum": ["pending", "completed", "missed", "skipped"]
+    },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "order": { "type": "integer" },
+    "routineId": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 0 },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^X-AUTIPLANNER-[A-Z0-9-]+$" },
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "completed" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["completedAt"] }
+    }
+  ]
+}

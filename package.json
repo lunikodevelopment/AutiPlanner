@@ -1,0 +1,17 @@
+{
+  "name": "autiplanner",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Accessibility-first routine planning contracts and integrations.",
+  "packageManager": "pnpm@11.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

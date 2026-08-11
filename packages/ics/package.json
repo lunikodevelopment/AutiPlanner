@@ -1,0 +1,16 @@
+{
+  "name": "@autiplanner/ics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node -e \"console.log('ics: round-trip tests are roadmap phase 1')\""
+  },
+  "dependencies": {
+    "@autiplanner/core": "workspace:*"
+  }
+}

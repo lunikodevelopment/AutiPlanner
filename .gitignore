@@ -37,5 +37,5 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-data/
-calendar-data/
+/data/
+/calendar-data/

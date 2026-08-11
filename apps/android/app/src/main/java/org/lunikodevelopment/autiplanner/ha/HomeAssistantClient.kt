@@ -78,7 +78,7 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             requestMethod = method
             connectTimeout = 10_000
             readTimeout = 15_000
-            setRequestProperty("Authorization", "Bearer ${config.accessToken}")
+            setRequestProperty("Authorization", "Bearer ${normalizeAccessToken(config.accessToken)}")
             setRequestProperty("Accept", "application/json")
             if (body != null) {
                 doOutput = true
@@ -92,6 +92,9 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (responseCode !in 200..299) {
                 val detail = response.replace(Regex("\\s+"), " ").trim().take(240)
+                if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
+                    throw HomeAssistantException("Home Assistant authentication failed (HTTP 401). Re-enter a valid long-lived access token.")
+                }
                 throw HomeAssistantException(
                     if (detail.isEmpty()) "Home Assistant returned HTTP $responseCode"
                     else "Home Assistant returned HTTP $responseCode: $detail",
@@ -106,6 +109,11 @@ class HomeAssistantClient(private val config: HomeAssistantConfig) {
             connection.disconnect()
         }
     }
+}
+
+internal fun normalizeAccessToken(value: String): String {
+    val token = value.trim()
+    return if (token.startsWith("Bearer ", ignoreCase = true)) token.substring(7).trim() else token
 }
 
 private fun JSONObject.putOptional(key: String, value: String?) {

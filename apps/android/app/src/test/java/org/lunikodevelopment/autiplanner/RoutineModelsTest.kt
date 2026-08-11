@@ -3,11 +3,18 @@ package org.lunikodevelopment.autiplanner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.lunikodevelopment.autiplanner.ha.normalizeAccessToken
 import org.lunikodevelopment.autiplanner.model.RoutineStatus
 import org.lunikodevelopment.autiplanner.model.RoutinePriority
 import org.lunikodevelopment.autiplanner.model.routineItemOrNull
 
 class RoutineModelsTest {
+    @Test
+    fun normalizesPastedBearerTokens() {
+        assertEquals("secret", normalizeAccessToken("  Bearer   secret  "))
+        assertEquals("secret", normalizeAccessToken("secret"))
+    }
+
     @Test
     fun parsesAllFourOutcomesAndRejectsIncompleteCompletedRecords() {
         val outcomes = listOf("PENDING", "COMPLETED", "MISSED", "SKIPPED")

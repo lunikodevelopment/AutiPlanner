@@ -1,0 +1,23 @@
+{
+  "title": "AutiPlanner",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure AutiPlanner",
+        "description": "Choose the local iCalendar file that Home Assistant will own and the explicit day-part fallback for imported tasks.",
+        "data": {
+          "name": "Name",
+          "path": "ICS file path",
+          "default_day_part": "Default day part for imported tasks"
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "Choose an absolute file path that is not a directory.",
+      "already_configured": "This ICS file is already configured."
+    },
+    "abort": {
+      "already_configured": "AutiPlanner is already configured."
+    }
+  }
+}

@@ -12,6 +12,7 @@
     "test": "pnpm -r test"
   },
   "devDependencies": {
+    "tsx": "^4.23.12",
     "typescript": "^5.9.2"
   }
 }

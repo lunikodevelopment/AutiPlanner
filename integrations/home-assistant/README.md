@@ -1,35 +1,34 @@
-# Home Assistant integration
+# AutiPlanner Home Assistant integration
 
-This directory is reserved for the AutiPlanner custom integration.
+This directory contains the Phase 2 custom integration. It is configured from Home Assistant's UI and owns one local `.ics` file as the single writer for routine state.
 
-Do not advertise it as installable until the minimum integration skeleton, config flow, tests, and safe persistence behavior exist.
+## Install locally
 
-## Intended layout
+Copy `custom_components/autiplanner` into the Home Assistant configuration directory:
 
 ```text
-integrations/home-assistant/
-  custom_components/
-    autiplanner/
-      __init__.py
-      manifest.json
-      config_flow.py
-      const.py
-      calendar.py
-      todo.py
-      services.yaml
-      storage.py
-      ...
-  tests/
+<config directory>/custom_components/autiplanner/
 ```
 
-## Responsibilities
+Restart Home Assistant, then add **AutiPlanner** from Settings → Devices & services. Choose an absolute `.ics` path and the explicit day-part fallback used only for imported VTODOs without `X-AUTIPLANNER-DAYPART`.
 
-- own/read/write the configured `.ics` source;
-- expose standards-compatible Home Assistant entities;
-- preserve AutiPlanner day part and four-state outcome;
-- expose mutations for complete/missed/skipped/reset;
-- serialize mutations;
-- persist with atomic replacement;
-- avoid logging sensitive routine descriptions by default.
+The integration exposes:
 
-Before implementing this integration, verify behavior against current official Home Assistant developer documentation and add tests using current Home Assistant custom-component testing patterns.
+- a standard `todo` entity for interoperable create/update/delete/reorder operations;
+- a standard `calendar` entity for agenda consumers;
+- `autiplanner.complete`, `autiplanner.mark_missed`, `autiplanner.skip`, and `autiplanner.reset` actions for the richer four-state outcome model;
+- `autiplanner_item_updated` events containing UID, outcome, day part, and revision, without logging or emitting descriptions.
+
+All mutations go through one in-process `asyncio.Lock`, write a complete calendar to a same-directory temporary file, `fsync` it, and replace the configured file atomically. A missing file is initialized as an empty VCALENDAR. Malformed or incomplete records are skipped with warnings rather than guessed into a state; service errors leave the source file untouched.
+
+## Tests
+
+The portable tests cover the Python ICS codec, reload persistence, concurrent mutations, malformed records, and service errors:
+
+```bash
+python3 -m venv .venv-ha
+.venv-ha/bin/pip install -r integrations/home-assistant/requirements_test.txt
+PYTHONPATH=integrations/home-assistant .venv-ha/bin/pytest -q integrations/home-assistant/tests
+```
+
+The entity modules were also import-checked against Home Assistant 2026.2.3 during development. A full Home Assistant runtime is intentionally not committed to this repository.

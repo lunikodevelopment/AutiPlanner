@@ -15,6 +15,8 @@ Status: scaffolded.
 
 ## Phase 1 — Core + ICS round trip
 
+Status: complete.
+
 Goal: prove the data model independently of UI and Home Assistant.
 
 - implement production-quality ICS parsing/serialization for the documented VTODO subset;
@@ -28,6 +30,8 @@ Goal: prove the data model independently of UI and Home Assistant.
 Exit condition: `examples/autiplanner.ics` parses to the expected core model and serializes without losing AutiPlanner semantics.
 
 ## Phase 2 — Home Assistant custom integration
+
+Status: complete.
 
 Goal: make Home Assistant the authoritative runtime/synchronization layer.
 
@@ -43,6 +47,8 @@ Exit condition: two Home Assistant clients observe the same state and a mutation
 
 ## Phase 3 — Navet experience
 
+Status: complete.
+
 Goal: implement the date/day-part routine widget against the Home Assistant-backed capability.
 
 - inspect current upstream agent/UX guidance;
@@ -54,7 +60,11 @@ Goal: implement the date/day-part routine widget against the Home Assistant-back
 
 Exit condition: ✓/✕/○/— changes persist through Home Assistant and appear consistently after refresh.
 
+The repository contains the provider-neutral capability, Home Assistant adapter, accessible widget, responsive/theme-aware preview stylesheet, story fixtures, and focused adapter/render tests under `apps/navet-extension`. A Navet fork should wire the widget through Navet's existing primitives and theme helpers rather than vendor this repository's standalone CSS.
+
 ## Phase 4 — Android app
+
+Status: implementation complete; live device/Home Assistant acceptance remains an environment check.
 
 Goal: native editing and daily use.
 
@@ -68,7 +78,11 @@ Goal: native editing and daily use.
 
 Exit condition: Android and Navet reflect each other's changes through Home Assistant.
 
+The Android client is under `apps/android`. It uses the Android 16/API 36 toolchain, REST reads and service calls through Home Assistant, periodic refresh, an atomic private cache, date/day-part agenda UI, four-state actions, and create/edit/delete flows. The live exit condition requires a configured Home Assistant instance and device/emulator run, which are intentionally not fabricated in repository tests.
+
 ## Phase 5 — Recurrence and templates
+
+Status: contract and codec implementation complete; provider/UI expansion remains the next integration step.
 
 - standard RRULE-based recurrence;
 - occurrence-level outcome state;
@@ -77,6 +91,8 @@ Exit condition: Android and Navet reflect each other's changes through Home Assi
 - deterministic UID/occurrence identity rules.
 
 Do not implement recurrence by cloning an unbounded future calendar.
+
+The bounded core recurrence API and standard iCalendar round-trip support are implemented. Home Assistant and Android should consume expanded occurrences through a future provider-facing occurrence query rather than cloning recurring masters into the store.
 
 ## Phase 6 — Optional offline/conflict support
 

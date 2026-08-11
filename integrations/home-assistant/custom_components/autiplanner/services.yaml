@@ -1,0 +1,65 @@
+complete:
+  name: Complete routine
+  description: Mark one routine item as completed.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable UID of the routine item.
+      required: true
+      selector:
+        text:
+    completed_at:
+      name: Completed at
+      description: Optional completion timestamp; defaults to now.
+      required: false
+      selector:
+        datetime:
+
+mark_missed:
+  name: Mark routine missed
+  description: Mark one routine item as missed.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable UID of the routine item.
+      required: true
+      selector:
+        text:
+
+skip:
+  name: Skip routine
+  description: Mark one routine item as intentionally skipped.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable UID of the routine item.
+      required: true
+      selector:
+        text:
+
+reset:
+  name: Reset routine
+  description: Reset one routine item to pending.
+  target:
+    entity:
+      domain: todo
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable UID of the routine item.
+      required: true
+      selector:
+        text:

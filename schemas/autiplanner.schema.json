@@ -24,6 +24,10 @@
     "order": { "type": "integer" },
     "routineId": { "type": "string", "minLength": 1 },
     "revision": { "type": "integer", "minimum": 0 },
+    "rrule": { "type": "string", "minLength": 1 },
+    "rdate": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "exdate": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "recurrenceId": { "type": "string", "minLength": 1 },
     "tags": {
       "type": "array",
       "items": { "type": "string" },

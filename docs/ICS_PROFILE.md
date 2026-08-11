@@ -118,9 +118,20 @@ Recurring task identity needs two levels:
 
 Do not implement recurring completion by marking the series master completed. Completion belongs to an occurrence.
 
+Phase 5 support is bounded and explicit: `@autiplanner/core` exposes `routineTemplateToMaster`, `occurrenceUid`, and `expandRoutineItem`. Expansion requires a `from`/`to` date window and has a default 1,000-occurrence safety cap. The current generator supports standard `DAILY`, `WEEKLY`, and `MONTHLY` rules plus `COUNT`, `UNTIL`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `RDATE`, and `EXDATE`; unsupported frequencies fail loudly instead of silently approximating them. Occurrence overrides carry their own outcome and completion timestamp.
+
 ## Text escaping and folding
 
 Any serializer must implement iCalendar text escaping and line folding correctly before it is considered production-ready. The initial TypeScript package is a contract scaffold, not permission to ignore RFC-compatible escaping.
+
+The `@autiplanner/ics` package provides these Phase 1 entry points:
+
+- `parseCalendar(input)` returns valid routine items plus structured warnings;
+- `parseCalendar(input, { strict: true })` throws `IcsParseError` on the first malformed record;
+- `defaultDayPart` is an explicit fallback for importing records that do not carry AutiPlanner day-part metadata;
+- `serializeCalendar(items, { dtstamp })` writes a complete `VCALENDAR` with folded UTF-8 lines and a deterministic timestamp when requested.
+
+By default, malformed or incomplete VTODO records are skipped with warnings rather than being silently guessed into a day part or outcome. A record must have a UID, summary, usable scheduling date, and day part (unless an explicit parser fallback is supplied). A completed record must also have a valid `COMPLETED` timestamp. When standard `STATUS` conflicts with `X-AUTIPLANNER-OUTCOME`, the explicit AutiPlanner outcome wins and a warning is emitted.
 
 ## Unknown properties
 

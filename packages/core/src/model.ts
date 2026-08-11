@@ -36,6 +36,12 @@ export interface RoutineItem {
   routineId?: string;
   revision?: number;
 
+  /** Standard iCalendar recurrence fields. A recurring master remains pending; outcomes belong to occurrences. */
+  rrule?: string;
+  rdate?: readonly string[];
+  exdate?: readonly string[];
+  recurrenceId?: string;
+
   tags?: readonly string[];
 
   /** Unknown AutiPlanner extension properties preserved during round trips. */
@@ -65,9 +71,11 @@ export function validateRoutineItem(item: RoutineItem): readonly string[] {
 
   if (!item.uid.trim()) errors.push("uid must not be empty");
   if (!item.title.trim()) errors.push("title must not be empty");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date) || !isValidCalendarDate(item.date)) {
     errors.push("date must use YYYY-MM-DD");
   }
+  if (!isDayPart(item.dayPart)) errors.push("dayPart must be a supported day part");
+  if (!isRoutineStatus(item.status)) errors.push("status must be a supported routine status");
 
   if (item.status === "completed" && !item.completedAt) {
     errors.push("completed items require completedAt");
@@ -82,4 +90,14 @@ export function validateRoutineItem(item: RoutineItem): readonly string[] {
   }
 
   return errors;
+}
+
+function isValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match === null) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  return day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
 }

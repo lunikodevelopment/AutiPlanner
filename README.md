@@ -11,7 +11,7 @@ AutiPlanner is an accessibility-first routine planner designed around day-part p
 - Provide a provider-neutral core model that can be mapped into Navet without leaking Home Assistant payloads into shared UI code.
 - Keep the project easy for Codex and other coding agents to extend incrementally.
 
-## Planned architecture
+## Architecture
 
 ```text
                          ┌──────────────────────┐
@@ -30,15 +30,17 @@ AutiPlanner is an accessibility-first routine planner designed around day-part p
                                 │         │
                        ┌────────▼───┐  ┌──▼──────────────┐
                        │ Android app│  │ Navet extension │
-                       └────────────┘  └─────────────────┘
+                        └────────────┘  └─────────────────┘
 ```
+
+Android and Navet do not write the `.ics` file directly. They send commands through Home Assistant, and the integration performs locked, atomic persistence.
 
 ## Repository layout
 
 ```text
 apps/
-  android/                 Native Android client boundary and implementation notes
-  navet-extension/         AutiPlanner UI/adapter work intended for a Navet fork/upstream patch
+  android/                 Native Android client and Home Assistant-backed Compose app
+  navet-extension/         AutiPlanner UI/adapter patch surface for a Navet fork
 integrations/
   home-assistant/          Home Assistant custom integration
 packages/
@@ -80,9 +82,131 @@ END:VTODO
 
 See [`docs/ICS_PROFILE.md`](docs/ICS_PROFILE.md) for the full profile.
 
+## Current implementation status
+
+This checkout contains working implementations rather than only planning documents:
+
+- `packages/core` — provider-neutral contracts, validation, bounded recurrence, templates, and deterministic occurrence identity;
+- `packages/ics` — VTODO parsing/serialization, UTF-8 line folding, TEXT escaping, malformed-record warnings, recurrence fields, and round-trip tests;
+- `integrations/home-assistant` — config flow, standard to-do/calendar entities, four-state services, atomic locked writes, reload behavior, and update events;
+- `apps/navet-extension` — provider-neutral capability, Home Assistant mapping, accessible routine widget, responsive themes, and fixtures;
+- `apps/android` — buildable Kotlin/Jetpack Compose app with Home Assistant REST access, polling, local cache, date navigation, four-state actions, and create/edit/delete flows.
+
+The optional offline/conflict phase remains deferred until the Home Assistant-authoritative model proves insufficient.
+
+## Installation and verification
+
+### TypeScript packages
+
+Prerequisites: Node.js 22 or newer, Corepack, and pnpm.
+
+From the repository root:
+
+```bash
+corepack enable
+corepack prepare pnpm@11.0.0 --activate
+pnpm install
+pnpm typecheck
+pnpm test
+```
+
+The root test command covers `packages/core`, `packages/ics`, and `apps/navet-extension`.
+
+### Home Assistant
+
+Copy the custom component into the Home Assistant configuration directory:
+
+```text
+<home-assistant-config>/custom_components/autiplanner/
+```
+
+For this checkout, copy `integrations/home-assistant/custom_components/autiplanner/`. Restart Home Assistant, then select **AutiPlanner** from Settings → Devices & services → Add integration.
+
+Configure an absolute `.ics` path, an integration display name, and the explicit default day part used only for imported VTODOs that lack `X-AUTIPLANNER-DAYPART`. A missing file is initialized as an empty `VCALENDAR`; malformed records are skipped with parse warnings.
+
+The integration provides a standard `todo` entity, a standard `calendar` entity, the `autiplanner.complete`, `autiplanner.mark_missed`, `autiplanner.skip`, and `autiplanner.reset` services, and `autiplanner_item_updated` events containing UID, outcome, day part, and revision. Descriptions are not included in update events.
+
+All writes use one in-process lock, a same-directory temporary file, flush/fsync, restrictive file permissions, and atomic replacement.
+
+For repeatable remote installs, use [`scripts/install-home-assistant.sh`](scripts/install-home-assistant.sh). It accepts an SSH host/IP and port, uploads only the custom component, backs up any existing component, verifies the manifest, and does not restart Home Assistant unless explicitly requested:
+
+```bash
+./scripts/install-home-assistant.sh \
+  --host 192.168.1.20 \
+  --port 22 \
+  --user root \
+  --identity-file ~/.ssh/id_ed25519
+```
+
+The shorter form is also supported: `./scripts/install-home-assistant.sh 192.168.1.20 22 --user root`.
+
+Use `--config-dir` when the Home Assistant configuration is not `/config`, and `--restart-command 'ha core restart'` only when the remote SSH environment provides that command. Run `--dry-run` first to inspect the source and destination without connecting.
+
+Run the portable Home Assistant tests with:
+
+```bash
+python3 -m venv .venv-ha
+.venv-ha/bin/pip install -r integrations/home-assistant/requirements_test.txt
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  PYTHONPATH=integrations/home-assistant \
+  .venv-ha/bin/pytest -q integrations/home-assistant/tests
+```
+
+### Android
+
+Prerequisites: JDK 17, Android SDK platform 36, and Android build tools 36.
+
+The Android project is in `apps/android` and pins AGP 9.0.1, Gradle 9.1, Kotlin 2.3.20, Android API 36, and Compose BOM 2026.06.01.
+
+Set the SDK location in the ignored `apps/android/local.properties` file:
+
+```properties
+sdk.dir=/absolute/path/to/Android/sdk
+```
+
+Then build and test:
+
+```bash
+cd apps/android
+export JAVA_HOME=/path/to/jdk-17
+./gradlew testDebugUnitTest assembleDebug
+```
+
+The debug APK is generated at `apps/android/app/build/outputs/apk/debug/app-debug.apk`. Install it on a connected device or emulator with:
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+On first launch, enter the Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID. The app reads `autiplanner_items` through the Home Assistant state API, sends mutations through Home Assistant services, refreshes after writes, polls periodically, and stores the last successful normalized list in an atomic private cache. The development build stores the token in private app preferences and never logs it; a production release should use Android Keystore-backed storage.
+
+## Navet extension
+
+`apps/navet-extension` is an AutiPlanner-owned patch surface; Navet itself is not vendored here. Its provider-neutral widget consumes normalized routine items and generic commands. The Home Assistant mapping is isolated in `src/home-assistant-provider.ts`; the widget does not parse ICS or issue raw service payloads.
+
+It renders visible `○`, `✓`, `✕`, and `—` states, supports primary completion and detail actions, provides keyboard/focus semantics, and includes responsive light, dark, black, and glass preview themes. A Navet fork should connect it to Navet's existing primitives and theme helpers.
+
+```bash
+pnpm --filter @autiplanner/navet-extension typecheck
+pnpm --filter @autiplanner/navet-extension test
+```
+
+See [`docs/NAVET_INTEGRATION.md`](docs/NAVET_INTEGRATION.md) for the provider boundary and licensing guidance.
+
+## Core data and recurrence
+
+```ts
+type DayPart = "morning" | "afternoon" | "evening" | "night";
+type RoutineStatus = "pending" | "completed" | "missed" | "skipped";
+```
+
+Recurring masters remain pending; completion belongs to an occurrence override. Recurrence uses standard `RRULE`, `RDATE`, `EXDATE`, and `RECURRENCE-ID` fields. `packages/core` exposes `routineTemplateToMaster`, `occurrenceUid`, and `expandRoutineItem`. Expansion requires an explicit `from`/`to` window and defaults to a 1,000-occurrence safety cap. The current bounded generator supports `DAILY`, `WEEKLY`, and `MONTHLY` rules with `COUNT`, `UNTIL`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `RDATE`, and `EXDATE`; unsupported frequencies fail loudly.
+
+See [`docs/ICS_PROFILE.md`](docs/ICS_PROFILE.md) for the complete VTODO profile and malformed-record behavior.
+
 ## Development
 
-The repository starts deliberately small. The TypeScript packages are the executable contract/reference layer; the Home Assistant and Android directories begin as integration boundaries to be filled in feature-by-feature.
+The repository starts deliberately small. The TypeScript packages are the executable contract/reference layer, the Home Assistant integration is the authoritative local runtime, and the Navet extension is a provider-neutral widget/adapter patch surface.
 
 ```bash
 corepack enable
@@ -91,13 +215,28 @@ pnpm typecheck
 pnpm test
 ```
 
+The current checkout implements Phases 1–4 and the bounded Phase 5 core/codec work. The live Phase 4 acceptance check still requires a configured Home Assistant instance and Android device/emulator; those credentials and devices are intentionally not committed.
+
 ## Using Codex
 
 Read [`AGENTS.md`](AGENTS.md) first. It defines the invariants Codex should preserve, the source-of-truth documents to read before changing each subsystem, and the recommended implementation order.
 
-A useful first Codex task is:
+For architectural or integration changes, read `AGENTS.md` and the relevant source-of-truth document before editing. Keep Home Assistant as the single writer, keep provider payloads out of shared Navet UI, preserve stable UIDs, and add focused tests for user-visible behavior and malformed input.
 
-> Read AGENTS.md, docs/ARCHITECTURE.md, docs/ICS_PROFILE.md, and docs/ROADMAP.md. Implement Phase 1 only: make the core model and ICS package parse and serialize the example VTODO records, add round-trip tests, and do not modify the Home Assistant, Android, or Navet boundaries yet.
+## Publishing changes
+
+The checkout is connected to the upstream GitHub remote. Review the worktree, create an intentional branch, commit, and push normally:
+
+```bash
+git remote -v
+git status
+git switch -c codex/your-change
+git add README.md <other-files>
+git commit -m "Describe the change"
+git push -u origin codex/your-change
+```
+
+Do not commit access tokens, real household calendars, `local.properties`, build outputs, virtual environments, or generated caches.
 
 ## Navet licensing boundary
 
@@ -105,4 +244,4 @@ Navet is an upstream dependency/integration target and is not vendored into this
 
 ## Status
 
-Foundation/scaffolding only. The data contract is intentionally specified before UI or synchronization code so that all clients can converge on the same behavior.
+Phases 1–4 are implemented, and the bounded Phase 5 recurrence/template contract and codec support are complete. Provider/UI expansion of recurring occurrences and optional offline/conflict support remain future work.

@@ -82,6 +82,18 @@ Not:
 shared React widget -> raw Home Assistant websocket/service payloads
 ```
 
+## Phase 3 implementation surface
+
+`apps/navet-extension` now contains an AutiPlanner-owned prototype boundary:
+
+- `src/capability.ts` is the provider-neutral state/command contract;
+- `src/home-assistant-provider.ts` maps the HA to-do entity's normalized `autiplanner_items` attribute and translates commands to the four AutiPlanner services;
+- `src/routine-planner.tsx` renders date/day-part groups, visible `○`/`✓`/`✕`/`—` states, primary completion, and progressive detail actions;
+- `src/routine-planner.css` is a standalone preview stylesheet only, with light, dark, black, and glass theme variables;
+- `src/story-fixtures.ts` and `test/` cover all states, malformed provider records, service translation, and accessible row affordances.
+
+The implementation was guided by Navet's current compact calendar event item and calendar small view, the Home dashboard rhythm guidance, the provider-neutral UI contract, and the Home Assistant adapter/testing guidance. It remains a patch surface for a Navet fork; it does not vendor Navet or make the shared widget depend on Home Assistant.
+
 ## Licensing
 
 Navet currently identifies itself as AGPL-3.0. If a Navet fork contains modified Navet source, preserve the upstream license/notices and comply with the license for those derivative portions. Keep original AutiPlanner components and upstream-derived code clearly attributable rather than obscuring provenance.

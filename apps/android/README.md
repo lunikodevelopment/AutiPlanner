@@ -2,7 +2,18 @@
 
 This directory is the boundary for the future native AutiPlanner Android application.
 
-The initial repository intentionally does not pin an Android Gradle/Compose toolchain before the client phase starts. When Phase 4 begins, initialize the project using the then-current stable Android toolchain rather than inheriting stale scaffold versions.
+Phase 4 now contains a buildable Kotlin + Jetpack Compose client. The project pins the current toolchain used for this implementation: Android Gradle Plugin 9.0.1, Gradle 9.1, Kotlin 2.3.20, Android API 36, and Compose BOM 2026.06.01.
+
+The first connection strategy is deliberately small and inspectable:
+
+- configure a Home Assistant base URL, long-lived access token, and AutiPlanner to-do entity ID;
+- read normalized `autiplanner_items` through `GET /api/states/{entity_id}`;
+- send status changes through `POST /api/services/autiplanner/{service}`;
+- send create/edit/delete through Home Assistant's standard `todo` services;
+- refresh after every mutation and poll periodically so the Home Assistant state remains authoritative;
+- keep the last successful normalized item list in an atomic local cache for read resilience.
+
+The token is kept in the app's private preferences for this first scaffold and is never logged. A production release should replace that storage with an Android Keystore-backed secret store before distribution.
 
 ## Product requirements
 
@@ -33,3 +44,14 @@ AFTERNOON
 EVENING
   — Optional journaling   20:00
 ```
+
+## Build and test
+
+From this directory:
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
+./gradlew testDebugUnitTest assembleDebug
+```
+
+The generated debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. The UI includes loading, error, empty, all four outcome states, date navigation, detail actions, and create/edit/delete flows with TalkBack labels and 44–48 dp touch targets.

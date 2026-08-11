@@ -94,6 +94,22 @@ shared React widget -> raw Home Assistant websocket/service payloads
 
 The implementation was guided by Navet's current compact calendar event item and calendar small view, the Home dashboard rhythm guidance, the provider-neutral UI contract, and the Home Assistant adapter/testing guidance. It remains a patch surface for a Navet fork; it does not vendor Navet or make the shared widget depend on Home Assistant.
 
+## HACS SSH bridge patch
+
+The HACS installation is a compiled Home Assistant panel under `/config/custom_components/navet`; it does not contain the TypeScript source from `apps/navet-extension`. Use [`scripts/install-navet-patch.sh`](../scripts/install-navet-patch.sh) to apply the compiled-installation bridge over SSH.
+
+The script validates the HACS Navet directory, backs up `__init__.py` and existing AutiPlanner web assets under `/config/.autiplanner-backups/`, installs the shared calendar card, icon font, and Navet panel wrapper into `/config/www/`, then adds an **AutiPlanner** sidebar panel at `/autiplanner`. It leaves Navet's original `/navet` panel intact and is idempotent after HACS updates.
+
+```bash
+./scripts/install-navet-patch.sh \
+  --host 192.168.1.20 \
+  --port 2222 \
+  --user root \
+  --restart-command 'ha core restart'
+```
+
+Use `--navet-dir` when the HACS component is stored outside the usual `/config/custom_components/navet` path, or `--dry-run` to inspect the targets first. A Home Assistant restart is required to register the extra panel.
+
 ## Licensing
 
 Navet currently identifies itself as AGPL-3.0. If a Navet fork contains modified Navet source, preserve the upstream license/notices and comply with the license for those derivative portions. Keep original AutiPlanner components and upstream-derived code clearly attributable rather than obscuring provenance.

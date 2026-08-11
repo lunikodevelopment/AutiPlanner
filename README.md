@@ -221,7 +221,17 @@ pnpm --filter @autiplanner/navet-extension typecheck
 pnpm --filter @autiplanner/navet-extension test
 ```
 
-See [`docs/NAVET_INTEGRATION.md`](docs/NAVET_INTEGRATION.md) for the provider boundary and licensing guidance.
+For an already-installed HACS Navet panel, apply the SSH bridge patch with [`scripts/install-navet-patch.sh`](scripts/install-navet-patch.sh). It keeps Navet's original panel, adds an AutiPlanner sidebar panel, uploads the shared card/icon assets, backs up the HACS integration outside `custom_components`, and can optionally restart Home Assistant:
+
+```bash
+./scripts/install-navet-patch.sh \
+  --host 192.168.1.20 \
+  --port 2222 \
+  --user root \
+  --restart-command 'ha core restart'
+```
+
+See [`docs/NAVET_INTEGRATION.md`](docs/NAVET_INTEGRATION.md) for the provider boundary, HACS patch behavior, and licensing guidance.
 
 ## Core data and recurrence
 

@@ -209,6 +209,13 @@ mv "\$staging_dir/custom_components/autiplanner" "\$install_dir"
 component_installed=1
 test -f "\$install_dir/manifest.json"
 test -f "\$install_dir/config_flow.py"
+grep -Fq 'class AutiPlannerConfigFlow' "\$install_dir/config_flow.py"
+if grep -R -n --include='*.py' 'custom_components.autiplanner.backup' "\$install_dir"; then
+  printf 'error: installed component still references missing autiplanner.backup\n' >&2
+  exit 1
+fi
+printf 'installed manifest: '
+grep -m1 '"version"' "\$install_dir/manifest.json"
 mkdir -p "\$card_dir"
 if [ -e "\$card_install" ]; then
   card_backup="\$card_install.backup.\$(date -u +%Y%m%dT%H%M%SZ)"

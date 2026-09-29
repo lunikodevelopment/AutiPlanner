@@ -108,8 +108,7 @@ async def _mint_token(
     user = auth.async_get_user(user_id) if user_id else None
     if user is None:
         # Fall back to the first owner so a code issued by an admin still works.
-        owners = await auth.async_get_owners()
-        user = owners[0] if owners else None
+        user = await auth.async_get_owner()
     if user is None:
         return None
 

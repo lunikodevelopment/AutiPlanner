@@ -11,9 +11,9 @@ import datetime as dt
 import logging
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from homeassistant.components.calendar import CalendarEntity
+from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -53,7 +53,7 @@ class AutiPlannerCalendar(CalendarEntity):
         self._attr_unique_id = f"{config_entry.entry_id}-routine"
         self._store = data_for(hass, config_entry.entry_id)
         self._tz = _zone(hass)
-        self._event: dict | None = None
+        self._event: CalendarEvent | None = None
         self._range_start: dt.datetime | None = None
         self._range_end: dt.datetime | None = None
         self.unsub = async_dispatcher_connect(
@@ -61,7 +61,7 @@ class AutiPlannerCalendar(CalendarEntity):
         )
 
     @property
-    def event(self):
+    def event(self) -> CalendarEvent | None:
         return self._event
 
     @property
@@ -74,7 +74,7 @@ class AutiPlannerCalendar(CalendarEntity):
 
     async def async_get_events(
         self, hass: HomeAssistant, start_date: dt.datetime, end_date: dt.datetime
-    ) -> list:
+    ) -> list[CalendarEvent]:
         self._range_start = start_date
         self._range_end = end_date
         self._event = self._next_event(start_date, end_date)
@@ -90,12 +90,21 @@ class AutiPlannerCalendar(CalendarEntity):
         self._event = self._next_event(self._range_start, self._range_end)
         self.async_write_ha_state()
 
+    @callback
     def _handle_update(self) -> None:
-        """A client changed state. Keep the calendar current for subscribers."""
-        self.hass.async_create_task(self.async_update())
-        self.async_update_event_listeners()
+        """Refresh after another client changed the calendar.
 
-    def _next_event(self, start: dt.datetime, end: dt.datetime) -> dict | None:
+        `@callback` matters: an undecorated function is classified as an
+        executor job by `async_dispatcher_send` and would run off the event
+        loop. The task goes through the config entry, which is the supported way
+        for an integration to create one.
+
+        Subscribers are republished by the base entity whenever the state is
+        written, so no explicit listener notification is needed.
+        """
+        self._entry.async_create_task(self.hass, self.async_update())
+
+    def _next_event(self, start: dt.datetime, end: dt.datetime) -> CalendarEvent | None:
         now = dt.datetime.now(tz=self._tz)
         boundary = max(now, start)
         for item in self._store.items_for_range(
@@ -105,20 +114,28 @@ class AutiPlannerCalendar(CalendarEntity):
             if item.status in ("missed", "skipped"):
                 continue
             event = _to_event(item, self._tz)
-            if event["start"] < end:
+            # CalendarEvent.start is a date for an all-day item and a datetime
+            # otherwise, so normalise before comparing.
+            event_start = (
+                dt.datetime.combine(event.start, dt.time.min, tzinfo=self._tz)
+                if isinstance(event.start, dt.date) and not isinstance(event.start, dt.datetime)
+                else event.start
+            )
+            if event_start < end:
                 return event
         return None
 
 
-def _to_event(item: RoutineItem, tz: ZoneInfo) -> dict:
+def _to_event(item: RoutineItem, tz: ZoneInfo) -> CalendarEvent:
     """Maps one routine item onto a calendar event.
 
-    The AutiPlanner outcome is carried in the description prefix and the event
-    `uid`, so a client that only understands standard calendar events still
-    receives a coherent event.
+    The AutiPlanner outcome is carried in the summary glyph and description, so
+    a client that only understands standard calendar events still receives a
+    coherent event.
     """
     start = _local(item, tz)
     end = start + _DEFAULT_DURATION
+    all_day = item.start is None
     summary = f"{_symbol(item)} {item.title}"
     parts = [
         f"Outcome: {item.status}",
@@ -128,13 +145,15 @@ def _to_event(item: RoutineItem, tz: ZoneInfo) -> dict:
         parts.append(f"Completed: {item.completed_at}")
     if item.description:
         parts.append(item.description)
-    return {
-        "start": start.date() if item.start is None else start,
-        "end": end.date() if item.start is None else end,
-        "summary": summary,
-        "description": "\n".join(parts),
-        "uid": item.uid,
-    }
+    # CalendarEvent.start and end must be the same type, and an all-day event
+    # must use a date rather than a datetime.
+    return CalendarEvent(
+        start=start.date() if all_day else start,
+        end=end.date() if all_day else end,
+        summary=summary,
+        description="\n".join(parts),
+        uid=item.uid,
+    )
 
 
 def _symbol(item: RoutineItem) -> str:

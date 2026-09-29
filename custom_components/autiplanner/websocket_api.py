@@ -1,201 +1,193 @@
 """WebSocket API for AutiPlanner clients.
 
-A service call returns only success or failure. AutiPlanner clients need the
-resulting item so they can confirm the four-state outcome, and they need to
-subscribe to a date window so an Android edit shows up on the dashboard.
+Only long-standing ``websocket_api`` helpers are used here: ``websocket_command``,
+``async_response``, ``async_register_command``, ``ActiveConnection``, and
+``event_message``. Subscriptions are wired with ``async_dispatcher_connect``
+directly, because ``websocket_api`` has no subscription decorator.
 """
 
 from __future__ import annotations
 
+import datetime as dt
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from . import data_for, entry_ids
-from .const import (
-    ATTR_EXPECTED_REVISION,
-    ATTR_UID,
-    DOMAIN,
-    SERVICE_COMPLETE,
-    SERVICE_CREATE,
-    SERVICE_DELETE,
-    SERVICE_MARK_MISSED,
-    SERVICE_RESET,
-    SERVICE_SKIP,
-    SERVICE_UPDATE,
-)
+from . import data_for, entry_ids, notify
+from .api import agenda_payload, item_payload
+from .commands import apply_command
+from .const import DOMAIN
+from .store import RoutineError
 
 TYPE_AGENDA = f"{DOMAIN}/agenda"
 TYPE_SUBSCRIBE = f"{DOMAIN}/agenda/subscribe"
 TYPE_COMMAND = f"{DOMAIN}/command"
-TYPE_SUBSCRIBE_RESULT = f"{DOMAIN}/agenda/subscribed"
 
-_WINDOW = "limit"
 _ENTITY = "entity_id"
+_WINDOW = "limit"
+_ITEM = "item"
+_PATCH = "patch"
+
+#: Codes Home Assistant understands as websocket error codes.
+_CODE_NOT_FOUND = "not_found"
+_CODE_CONFLICT = "autiplanner_conflict"
+_CODE_ERROR = "autoplanner_error"
 
 
 def async_register(hass: HomeAssistant) -> None:
-    websocket_api.async_register_command(hass, _agenda_command)
-    websocket_api.async_register_command(hass, _subscribe_command)
-    websocket_api.async_register_command(hass, _command_command)
+    websocket_api.async_register_command(hass, ws_agenda)
+    websocket_api.async_register_command(hass, ws_subscribe)
+    websocket_api.async_register_command(hass, ws_command)
 
 
-def _resolve(hass: HomeAssistant, message: dict) -> str:
-    entity_ids = message.get(_ENTITY)
+@callback
+def _resolve(hass: HomeAssistant, connection, msg: dict) -> str | None:
+    """Resolves the target config entry, or reports an error and returns None."""
+    entity_ids = msg.get(_ENTITY)
     if not entity_ids:
         available = entry_ids(hass)
         if not available:
-            raise websocket_api.UnknownMethod("no AutiPlanner calendar is configured")
+            connection.send_error(
+                msg["id"], _CODE_NOT_FOUND, "No AutiPlanner calendar is configured"
+            )
+            return None
         return available[0]
+
+    # `platform` is the integration; `domain` would be `sensor` or `calendar`.
     from homeassistant.helpers import entity_registry as er
 
     registry = er.async_get(hass)
     for entity_id in entity_ids:
         entry = registry.async_get(entity_id)
-        # `platform` is the integration; `domain` would be `sensor` or `calendar`.
-        if entry is not None and entry.platform == DOMAIN and entry.config_entry_id in hass.data.get(DOMAIN, {}):
+        if (
+            entry is not None
+            and entry.platform == DOMAIN
+            and entry.config_entry_id in hass.data.get(DOMAIN, {})
+        ):
             return entry.config_entry_id
-    raise websocket_api.UnknownMethod(f"{entity_ids[0]} is not an AutiPlanner entity")
+    connection.send_error(
+        msg["id"], _CODE_NOT_FOUND, f"{entity_ids[0]} is not an AutiPlanner entity"
+    )
+    return None
 
 
-@callback
-def _agenda(hass: HomeAssistant, entry_id: str, limit: int) -> list[dict]:
-    import datetime as dt
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
+def _window(hass: HomeAssistant, limit: int) -> tuple[str, str, list]:
     try:
         tz = ZoneInfo(str(hass.config.time_zone))
-    except (ZoneInfoNotFoundError, ValueError):
+    except (ZoneInfoNotFoundError, ValueError):  # pragma: no cover - unusual config
         tz = ZoneInfo("UTC")
     today = dt.datetime.now(tz=tz).date()
     start = (today - dt.timedelta(days=limit)).isoformat()
     end = (today + dt.timedelta(days=limit)).isoformat()
-    store = data_for(hass, entry_id)
-    return [
-        {
-            "uid": item.uid,
-            "title": item.title,
-            "date": item.date,
-            "dayPart": item.day_part,
-            "status": item.status,
-            "start": item.start,
-            "due": item.due,
-            "timezone": item.timezone,
-            "completedAt": item.completed_at,
-            "order": item.order,
-            "routineId": item.routine_id,
-            "revision": item.revision,
-        }
-        for item in store.items_for_range(start, end)
-    ]
+    return start, end, [tz]
 
 
-@websocket_api.websocket_command(
-    {
-        "type": TYPE_AGENDA,
-        vol.Optional(_ENTITY): [str],
-        vol.Optional(_WINDOW, default=14): vol.All(int, vol.Range(min=1, max=90)),
-    }
-)
-@websocket_api.async_response
-async def _agenda_command(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
-    entry_id = _resolve(hass, msg)
+def _rows(hass: HomeAssistant, entry_id: str, limit: int) -> dict:
     store = data_for(hass, entry_id)
-    connection.send_result(
-        msg["id"],
-        {
-            "items": _agenda(hass, entry_id, msg[_WINDOW]),
-            "revision": store.revision,
-            "issues": [f"{code}: {message}" for code, message in store.issues],
-        },
+    start, end, _ = _window(hass, limit)
+    return agenda_payload(
+        store.items_for_range(start, end),
+        store.revision,
+        [f"{code}: {message}" for code, message in store.issues],
+        start,
+        end,
     )
 
 
 @websocket_api.websocket_command(
     {
-        "type": TYPE_SUBSCRIBE,
+        vol.Required("type"): TYPE_AGENDA,
         vol.Optional(_ENTITY): [str],
         vol.Optional(_WINDOW, default=14): vol.All(int, vol.Range(min=1, max=90)),
     }
 )
-@websocket_api.subscribe_message
-@callback
-def _subscribe_command(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
-    entry_id = _resolve(hass, msg)
-
-    @callback
-    def _handle() -> None:
-        store = data_for(hass, entry_id)
-        connection.send_message(
-            websocket_api.event_message(
-                msg["id"],
-                {
-                    "items": _agenda(hass, entry_id, msg[_WINDOW]),
-                    "revision": store.revision,
-                },
-            )
-        )
-
-    connection.subscriptions[msg["id"]] = websocket_api.async_subscribe(hass, f"{DOMAIN}_{entry_id}_updated", _handle)
-    connection.send_result(msg["id"], {"items": _agenda(hass, entry_id, msg[_WINDOW])})
+@websocket_api.async_response
+async def ws_agenda(hass: HomeAssistant, connection, msg: dict) -> None:
+    entry_id = _resolve(hass, connection, msg)
+    if entry_id is None:
+        return
+    connection.send_result(msg["id"], _rows(hass, entry_id, msg[_WINDOW]))
 
 
 @websocket_api.websocket_command(
     {
-        "type": TYPE_COMMAND,
+        vol.Required("type"): TYPE_SUBSCRIBE,
+        vol.Optional(_ENTITY): [str],
+        vol.Optional(_WINDOW, default=14): vol.All(int, vol.Range(min=1, max=90)),
+    }
+)
+@callback
+def ws_subscribe(hass: HomeAssistant, connection, msg: dict) -> None:
+    entry_id = _resolve(hass, connection, msg)
+    if entry_id is None:
+        return
+    limit = msg[_WINDOW]
+
+    @callback
+    def _forward() -> None:
+        connection.send_message(
+            websocket_api.event_message(msg["id"], _rows(hass, entry_id, limit))
+        )
+
+    # The unsubscribe callback must be registered before the first result is
+    # sent, so a client that disconnects immediately still cleans up.
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+        hass, f"{DOMAIN}_{entry_id}_updated", _forward
+    )
+    connection.send_result(msg["id"], _rows(hass, entry_id, limit))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): TYPE_COMMAND,
         vol.Required("command"): vol.In(
-            [SERVICE_COMPLETE, SERVICE_MARK_MISSED, SERVICE_SKIP, SERVICE_RESET, SERVICE_CREATE, SERVICE_UPDATE, SERVICE_DELETE]
+            ["complete", "mark_missed", "skip", "reset", "create", "update", "delete"]
         ),
         vol.Optional(_ENTITY): [str],
-        vol.Optional(ATTR_UID): str,
+        vol.Optional("uid"): str,
         vol.Optional("completed_at"): str,
-        vol.Optional(ATTR_EXPECTED_REVISION): int,
-        vol.Optional("item"): dict,
-        vol.Optional("patch"): dict,
+        vol.Optional("expected_revision"): int,
+        vol.Optional(_ITEM, default=dict): dict,
+        vol.Optional(_PATCH, default=dict): dict,
     }
 )
 @websocket_api.async_response
-async def _command_command(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
-    from .commands import apply_command
-    from .model import RoutineItem
-
-    entry_id = _resolve(hass, msg)
+async def ws_command(hass: HomeAssistant, connection, msg: dict) -> None:
+    entry_id = _resolve(hass, connection, msg)
+    if entry_id is None:
+        return
     store = data_for(hass, entry_id)
-    command = msg["command"]
-    uid = msg.get(ATTR_UID)
-    expected = msg.get(ATTR_EXPECTED_REVISION)
-    payload: dict = {}
-    if msg.get("item"):
-        payload = dict(msg["item"])
-    if msg.get("patch"):
-        payload.update(msg["patch"])
+
+    payload: dict = dict(msg[_ITEM])
+    payload.update(msg[_PATCH])
     if msg.get("completed_at"):
         payload["completed_at"] = msg["completed_at"]
 
     try:
-        item = await apply_command(store, command, payload, uid, expected)
-    except Exception as error:  # noqa: BLE001 - surfaced to the client verbatim
-        from .store import RoutineError
-
-        if isinstance(error, RoutineError):
-            connection.send_error(
-                msg["id"],
-                websocket_api.const.ERR_NOT_FOUND if error.code == "not-found" else "autiplanner_conflict"
-                if error.code == "conflict"
-                else "autiplanner_error",
-                str(error),
-            )
-            return
-        raise
-
-    from . import notify
+        item = await apply_command(
+            store,
+            msg["command"],
+            payload,
+            msg.get("uid"),
+            msg.get("expected_revision"),
+        )
+    except RoutineError as error:
+        code = _CODE_CONFLICT if error.code == "conflict" else (
+            _CODE_NOT_FOUND if error.code == "not-found" else _CODE_ERROR
+        )
+        connection.send_error(msg["id"], code, str(error))
+        return
 
     notify(hass, entry_id)
+    # Clients render the outcome that was actually stored, so the item is
+    # returned instead of a bare boolean.
     connection.send_result(
         msg["id"],
         {
-            # Clients render the confirmed outcome, so the item is returned.
-            "item": item.to_dict() if isinstance(item, RoutineItem) else item,
+            "item": item_payload(item) if item is not None and hasattr(item, "uid") else None,
             "changed": True,
         },
     )

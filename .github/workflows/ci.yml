@@ -31,7 +31,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       # The store, ICS, recurrence, command, API, path, and pairing modules have
       # no Home Assistant dependency, so these run without installing it.
       - run: python -m unittest discover -s tests -t .
+
+  home-assistant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      # Loads the integration the way Home Assistant does. This is the job that
+      # catches invented APIs: an unknown symbol used at import time, a missing
+      # entity platform, or an unregistered HTTP route all fail here.
+      - run: pip install -r requirements-test.txt
+      - run: python -m pytest tests_ha -q

@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -52,7 +52,12 @@ class AutiPlannerCoordinator(DataUpdateCoordinator):
     """Keeps a normalized agenda window in memory for every client."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-        super().__init__(hass, _LOGGER, name=f"{DOMAIN}_{config_entry.entry_id}")
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_{config_entry.entry_id}",
+            config_entry=config_entry,
+        )
         self.entry_id = config_entry.entry_id
         self._store = data_for(hass, config_entry.entry_id)
         self._tz = _zone(hass)
@@ -77,8 +82,14 @@ class AutiPlannerCoordinator(DataUpdateCoordinator):
             for item in self._store.items_for_range(self.window_start, self.window_end)
         ]
 
+    @callback
     def _handle_update(self) -> None:
-        self.hass.async_create_task(self.async_refresh())
+        """Refresh after another client changed the calendar.
+
+        `@callback` keeps this on the event loop, and the task is created
+        through the config entry rather than `hass.async_create_task`.
+        """
+        self.config_entry.async_create_task(self.hass, self.async_refresh())
 
     def for_today(self) -> list[dict]:
         today = dt.datetime.now(tz=self._tz).date().isoformat()
@@ -174,13 +185,21 @@ def _zone(hass: HomeAssistant) -> ZoneInfo:
 
 
 def _normalized(item: Any) -> dict:
-    """Client-facing shape: camelCase day part and completion keys."""
-    return {
+    """Client-facing shape: camelCase day part and completion keys.
+
+    Absent values are omitted rather than sent as null, matching
+    ``api.item_payload`` so the sensor attribute and the HTTP API never
+    disagree. A missed or skipped item therefore carries no ``completedAt`` at
+    all, which is the point of keeping the four outcomes separate.
+    """
+    payload: dict = {
         "uid": item.uid,
         "title": item.title,
         "date": item.date,
         "dayPart": item.day_part,
         "status": item.status,
+    }
+    optional = {
         "description": item.description,
         "start": item.start,
         "due": item.due,
@@ -190,3 +209,7 @@ def _normalized(item: Any) -> dict:
         "routineId": item.routine_id,
         "revision": item.revision,
     }
+    for key, value in optional.items():
+        if value is not None:
+            payload[key] = value
+    return payload

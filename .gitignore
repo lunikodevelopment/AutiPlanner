@@ -1,7 +1,7 @@
 # Node / TypeScript
 node_modules/
-dist/
-coverage/
+/dist/
+/coverage/
 *.tsbuildinfo
 .pnpm-store/
 
@@ -32,9 +32,14 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Runtime data
+# Runtime data.
+#
+# These are anchored to the repository root on purpose. An unanchored `data/`
+# matches a directory named `data` at any depth, which silently excluded
+# apps/android/app/src/main/java/app/autiplanner/data/ from the repository and
+# left the Android app unable to compile from a fresh clone.
+/data/
+/calendar-data/
 *.db
 *.sqlite
 *.sqlite3
-data/
-calendar-data/

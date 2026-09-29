@@ -82,8 +82,8 @@ The app receives a Home Assistant token, saves the address, and looks up which
 sensor to read. Nothing else to type.
 
 The code is single use and expires after ten minutes. If it is never redeemed,
-nothing is stored. Issued tokens appear in your Home Assistant profile as
-**AutiPlanner app**, where you can revoke them.
+nothing is stored. Issued tokens appear in your Home Assistant profile under the
+device name that was sent, where you can revoke them.
 
 ### If you prefer a token by hand
 
@@ -127,7 +127,7 @@ curl -sS -X POST https://your-instance:8123/api/autiplanner/agenda \
 curl -sS -X POST https://your-instance:8123/api/autiplanner/command \
   -H "Authorization: Bearer $HA_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"command":"mark_missed","entity_id":["sensor.routine_agenda"],"uid":"exercise-20260811@autoplanner.local"}'
+  -d '{"command":"mark_missed","entity_id":["sensor.routine_agenda"],"uid":"exercise-20260811@autiplanner.local"}'
 ```
 
 A conflict returns HTTP 409 with `error.code: autiplanner_conflict`.

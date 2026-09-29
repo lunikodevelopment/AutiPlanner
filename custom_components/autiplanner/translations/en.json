@@ -1,0 +1,225 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "That calendar file is already configured."
+    },
+    "error": {
+      "empty_path": "Enter a file path.",
+      "not_a_file": "That path is not a regular file.",
+      "not_readable": "That file cannot be read.",
+      "not_writable": "That location cannot be written to.",
+      "path_is_directory": "That is a directory, not a calendar file.",
+      "unreadable": "That file could not be read as a calendar."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "calendar_name": "Calendar name",
+          "file_path": "Calendar file path"
+        },
+        "description": "Choose a local .ics file that AutiPlanner will read and write. Home Assistant is the only writer.",
+        "title": "Add an AutiPlanner routine calendar"
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "empty_path": "Enter a file path.",
+      "not_a_file": "That path is not a regular file.",
+      "not_readable": "That file cannot be read.",
+      "not_writable": "That location cannot be written to.",
+      "path_is_directory": "That is a directory, not a calendar file.",
+      "unreadable": "That file could not be read as a calendar."
+    },
+    "step": {
+      "init": {
+        "data": {
+          "calendar_name": "Calendar name",
+          "file_path": "Calendar file path"
+        },
+        "title": "Update the AutiPlanner routine calendar"
+      }
+    }
+  },
+  "services": {
+    "add_series": {
+      "description": "Adds a repeating template.",
+      "fields": {
+        "date": {
+          "name": "Start date"
+        },
+        "day_part": {
+          "name": "Day part"
+        },
+        "due": {
+          "name": "Due time"
+        },
+        "order": {
+          "name": "Order"
+        },
+        "recurrence": {
+          "name": "Recurrence"
+        },
+        "start": {
+          "name": "Start time"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Add repeated series"
+    },
+    "complete": {
+      "description": "Marks a routine item as completed.",
+      "fields": {
+        "completed_at": {
+          "description": "ISO-8601 timestamp with Z or a numeric offset.",
+          "name": "Completed at"
+        },
+        "expected_revision": {
+          "description": "Fails with a conflict when the stored revision differs.",
+          "name": "Expected revision"
+        },
+        "uid": {
+          "description": "Stable routine item uid.",
+          "name": "UID"
+        }
+      },
+      "name": "Complete"
+    },
+    "create": {
+      "description": "Adds a routine item to the calendar.",
+      "fields": {
+        "date": {
+          "name": "Date"
+        },
+        "day_part": {
+          "name": "Day part"
+        },
+        "description": {
+          "name": "Description"
+        },
+        "due": {
+          "name": "Due"
+        },
+        "order": {
+          "name": "Order"
+        },
+        "start": {
+          "name": "Start"
+        },
+        "status": {
+          "name": "Outcome"
+        },
+        "timezone": {
+          "name": "Timezone"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Create routine item"
+    },
+    "delete": {
+      "description": "Removes a routine item.",
+      "fields": {
+        "expected_revision": {
+          "name": "Expected revision"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Delete routine item"
+    },
+    "mark_missed": {
+      "description": "Records that a routine item was not done.",
+      "fields": {
+        "expected_revision": {
+          "name": "Expected revision"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Mark missed"
+    },
+    "pair": {
+      "description": "Creates a one-time code that the AutiPlanner app exchanges for a Home Assistant token.",
+      "fields": {
+        "device_name": {
+          "description": "Shown next to the issued token in your Home Assistant profile.",
+          "name": "Device name"
+        }
+      },
+      "name": "Pair a device"
+    },
+    "reset": {
+      "description": "Returns a routine item to pending.",
+      "fields": {
+        "expected_revision": {
+          "name": "Expected revision"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Reset"
+    },
+    "skip": {
+      "description": "Records that a routine item was intentionally skipped.",
+      "fields": {
+        "expected_revision": {
+          "name": "Expected revision"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Skip"
+    },
+    "update": {
+      "description": "Patches a routine item.",
+      "fields": {
+        "date": {
+          "name": "Date"
+        },
+        "day_part": {
+          "name": "Day part"
+        },
+        "description": {
+          "name": "Description"
+        },
+        "due": {
+          "name": "Due"
+        },
+        "expected_revision": {
+          "name": "Expected revision"
+        },
+        "order": {
+          "name": "Order"
+        },
+        "start": {
+          "name": "Start"
+        },
+        "status": {
+          "name": "Outcome"
+        },
+        "title": {
+          "name": "Title"
+        },
+        "uid": {
+          "name": "UID"
+        }
+      },
+      "name": "Update routine item"
+    }
+  },
+  "title": "AutiPlanner"
+}

@@ -8,10 +8,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "typecheck": "corepack pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" typecheck",
+    "test": "corepack pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" test",
+    "test:ha": "python3 -m unittest discover -s tests -t .",
+    "test:android": "cd apps/android && ./gradlew :app:testDebugUnitTest"
   },
   "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.2"
   }
 }

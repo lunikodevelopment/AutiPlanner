@@ -1,9 +1,6 @@
 export * from "./profile.js";
-
-/**
- * Phase 1 will add RFC-compatible parsing and serialization here.
- *
- * Keep this package narrow: it translates between @autiplanner/core and
- * iCalendar. Storage locking, Home Assistant entities, and UI concerns do not
- * belong here.
- */
+export * from "./types.js";
+export * from "./text.js";
+export * from "./parse.js";
+export * from "./serialize.js";
+export * from "./rrule.js";

@@ -1,0 +1,317 @@
+complete:
+  name: Complete
+  description: >-
+    Mark a routine item as completed. Use one occurrence uid for a repeated
+    item. The service is idempotent.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      description: Stable routine item uid.
+      required: true
+      example: "medication-am-20260811@autiplanner.local"
+      selector:
+        text:
+    completed_at:
+      name: Completed at
+      description: >-
+        ISO-8601 timestamp with Z or a numeric offset. Defaults to now when
+        omitted.
+      example: "2026-08-11T08:05:00Z"
+      selector:
+        text:
+    expected_revision:
+      name: Expected revision
+      description: >-
+        Optimistic concurrency. The call fails with a conflict when the stored
+        revision differs.
+      selector:
+        number:
+          min: 0
+          mode: box
+
+mark_missed:
+  name: Mark missed
+  description: >-
+    Record that a routine item was not done. This is not a failure to record
+    state and it is never stored as completed.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      example: "exercise-20260811@autiplanner.local"
+      selector:
+        text:
+    expected_revision:
+      name: Expected revision
+      selector:
+        number:
+          min: 0
+          mode: box
+
+skip:
+  name: Skip
+  description: Record that a routine item was intentionally skipped.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    expected_revision:
+      name: Expected revision
+      selector:
+        number:
+          min: 0
+          mode: box
+
+reset:
+  name: Reset
+  description: Return a routine item to pending. Use this to undo a change.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    expected_revision:
+      name: Expected revision
+      selector:
+        number:
+          min: 0
+          mode: box
+
+create:
+  name: Create routine item
+  description: Add a routine item to the calendar.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    title:
+      name: Title
+      required: true
+      selector:
+        text:
+    date:
+      name: Date
+      description: Local calendar day.
+      required: true
+      example: "2026-08-11"
+      selector:
+        text:
+    day_part:
+      name: Day part
+      description: Explicit grouping. It is never derived from the clock.
+      required: true
+      selector:
+        select:
+          options:
+            - morning
+            - afternoon
+            - evening
+            - night
+    status:
+      name: Outcome
+      required: true
+      selector:
+        select:
+          options:
+            - pending
+            - completed
+            - missed
+            - skipped
+    description:
+      name: Description
+      selector:
+        text:
+          multiline: true
+    start:
+      name: Start
+      selector:
+        text:
+    due:
+      name: Due
+      selector:
+        text:
+    timezone:
+      name: Timezone
+      selector:
+        text:
+    order:
+      name: Order
+      selector:
+        number:
+          min: 0
+          mode: box
+
+update:
+  name: Update routine item
+  description: Patch a routine item. Use null to clear an optional field.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    title:
+      name: Title
+      selector:
+        text:
+    date:
+      name: Date
+      selector:
+        text:
+    day_part:
+      name: Day part
+      selector:
+        select:
+          options:
+            - morning
+            - afternoon
+            - evening
+            - night
+    status:
+      name: Outcome
+      selector:
+        select:
+          options:
+            - pending
+            - completed
+            - missed
+            - skipped
+    description:
+      name: Description
+      selector:
+        text:
+          multiline: true
+    start:
+      name: Start
+      selector:
+        text:
+    due:
+      name: Due
+      selector:
+        text:
+    order:
+      name: Order
+      selector:
+        number:
+          min: 0
+          mode: box
+    expected_revision:
+      name: Expected revision
+      selector:
+        number:
+          min: 0
+          mode: box
+
+delete:
+  name: Delete routine item
+  description: Remove a routine item. A repeated series is deleted by its own uid.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    expected_revision:
+      name: Expected revision
+      selector:
+        number:
+          min: 0
+          mode: box
+
+add_series:
+  name: Add repeated series
+  description: >-
+    Add a repeating template. Occurrences expand per requested window; no
+    future calendar is cloned.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    uid:
+      name: UID
+      required: true
+      selector:
+        text:
+    title:
+      name: Title
+      required: true
+      selector:
+        text:
+    date:
+      name: Start date
+      required: true
+      example: "2026-08-11"
+      selector:
+        text:
+    day_part:
+      name: Day part
+      required: true
+      selector:
+        select:
+          options:
+            - morning
+            - afternoon
+            - evening
+            - night
+    recurrence:
+      name: Recurrence
+      required: true
+      selector:
+        object:
+    start:
+      name: Start time
+      selector:
+        text:
+    due:
+      name: Due time
+      selector:
+        text:
+    order:
+      name: Order
+      selector:
+        number:
+          min: 0
+          mode: box
+
+pair:
+  name: Pair a device
+  description: >-
+    Creates a one-time code that the AutiPlanner app exchanges for a Home
+    Assistant token. The code expires and can only be used once. Nothing is
+    stored if the code is never redeemed.
+  target:
+    entity:
+      integration: autiplanner
+  fields:
+    device_name:
+      name: Device name
+      description: Shown next to the issued token in your Home Assistant profile.
+      example: "Pixel 8"
+      selector:
+        text:

@@ -10,9 +10,21 @@
     "title": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
     "date": { "type": "string", "format": "date" },
-    "start": { "type": "string", "format": "date-time" },
-    "end": { "type": "string", "format": "date-time" },
-    "due": { "type": "string", "format": "date-time" },
+    "start": {
+      "type": "string",
+      "description": "ISO-8601 timestamp. A missing offset is a floating local time, not UTC.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$"
+    },
+    "end": {
+      "type": "string",
+      "description": "ISO-8601 timestamp. A missing offset is a floating local time, not UTC.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$"
+    },
+    "due": {
+      "type": "string",
+      "description": "ISO-8601 timestamp. A missing offset is a floating local time, not UTC.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$"
+    },
     "timezone": { "type": "string", "minLength": 1 },
     "dayPart": {
       "enum": ["morning", "afternoon", "evening", "night"]
@@ -20,9 +32,17 @@
     "status": {
       "enum": ["pending", "completed", "missed", "skipped"]
     },
-    "completedAt": { "type": "string", "format": "date-time" },
+    "completedAt": {
+      "type": "string",
+      "description": "ISO-8601 timestamp with Z or a numeric offset. Required when status is completed.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$"
+    },
     "order": { "type": "integer" },
-    "routineId": { "type": "string", "minLength": 1 },
+    "routineId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Series uid when this record is an occurrence override. The uid must be <routineId>:<date>."
+    },
     "revision": { "type": "integer", "minimum": 0 },
     "tags": {
       "type": "array",
@@ -42,6 +62,16 @@
         "required": ["status"]
       },
       "then": { "required": ["completedAt"] }
+    },
+    {
+      "if": {
+        "properties": { "routineId": { "minLength": 1 } },
+        "required": ["routineId"]
+      },
+      "then": {
+        "description": "An occurrence override carries its series uid in routineId and its own uid as <routineId>:<date>. The relationship cannot be expressed as a portable pattern, so validate it in code.",
+        "required": ["date"]
+      }
     }
   ]
 }

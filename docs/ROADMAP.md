@@ -15,6 +15,8 @@ Status: scaffolded.
 
 ## Phase 1 — Core + ICS round trip
 
+Status: implemented.
+
 Goal: prove the data model independently of UI and Home Assistant.
 
 - implement production-quality ICS parsing/serialization for the documented VTODO subset;
@@ -28,6 +30,8 @@ Goal: prove the data model independently of UI and Home Assistant.
 Exit condition: `examples/autiplanner.ics` parses to the expected core model and serializes without losing AutiPlanner semantics.
 
 ## Phase 2 — Home Assistant custom integration
+
+Status: implemented.
 
 Goal: make Home Assistant the authoritative runtime/synchronization layer.
 
@@ -43,6 +47,9 @@ Exit condition: two Home Assistant clients observe the same state and a mutation
 
 ## Phase 3 — Navet experience
 
+Status: capability and Home Assistant adapter implemented. The React widget
+lives in a Navet fork or patch series, not in this repository.
+
 Goal: implement the date/day-part routine widget against the Home Assistant-backed capability.
 
 - inspect current upstream agent/UX guidance;
@@ -55,6 +62,10 @@ Goal: implement the date/day-part routine widget against the Home Assistant-back
 Exit condition: ✓/✕/○/— changes persist through Home Assistant and appear consistently after refresh.
 
 ## Phase 4 — Android app
+
+Status: implemented. Agenda, four-state actions, accessibility, and a Home
+Assistant client are in place. Item create/edit/delete UI and a local cache are
+still open.
 
 Goal: native editing and daily use.
 
@@ -70,22 +81,37 @@ Exit condition: Android and Navet reflect each other's changes through Home Assi
 
 ## Phase 5 — Recurrence and templates
 
-- standard RRULE-based recurrence;
-- occurrence-level outcome state;
-- reusable routine templates;
-- exceptions and one-off overrides;
-- deterministic UID/occurrence identity rules.
+Status: implemented.
 
-Do not implement recurrence by cloning an unbounded future calendar.
+- standard `RRULE` subset: `FREQ` daily/weekly/monthly, `INTERVAL`, `COUNT`,
+  `UNTIL`, `BYDAY` for weekly;
+- occurrence-level outcome state; the series master is never completed;
+- reusable routine templates with `EXDATE` and `RDATE`;
+- one-off overrides addressed as `<series-uid>:<date>` with `RECURRENCE-ID`;
+- deterministic occurrence identity.
+
+Expansion is bounded to a 366-day requested window. The calendar is never
+cloned into an unbounded future.
 
 ## Phase 6 — Optional offline/conflict support
 
-Only add this if it is actually needed.
+Status: revision field, optimistic concurrency, conflict UI, and a command queue
+are implemented. Offline-first mutation is not.
 
-- revision field;
-- optimistic concurrency;
-- conflict UI;
-- deterministic merge rules;
-- offline command queue.
+- `X-AUTIPLANNER-REVISION` is written and read on every record;
+- commands accept `expectedRevision` / `expected_revision` and fail with a
+  conflict instead of overwriting;
+- a conflicting command is not applied; the client shows the stored item and
+  leaves the retry to the user;
+- `flushQueue` replays commands in order and stops at the first conflict;
+- merge rules are deliberately absent. The server item is authoritative.
 
-Avoid building a distributed sync engine before the simpler Home Assistant-authoritative model proves insufficient.
+Adding an offline command queue and a true offline-first editor should wait until
+the Home Assistant-authoritative model is shown to be insufficient.
+
+## Remaining work
+
+- Android create/edit/delete screens and a local read cache.
+- A Navet React widget, in a Navet fork or patch series rather than this repo.
+- Config-flow, entity, and service tests on the real Home Assistant harness,
+  including verifying that token minting works on current Home Assistant.

@@ -1,0 +1,13 @@
+{
+  "domain": "autiplanner",
+  "name": "AutiPlanner",
+  "codeowners": ["@luna-dj"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/lunikodevelopment/AutiPlanner/blob/main/SETUP.md",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/lunikodevelopment/AutiPlanner/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

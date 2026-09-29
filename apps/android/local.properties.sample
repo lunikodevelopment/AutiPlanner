@@ -1,0 +1,2 @@
+# Local machine paths. Do not commit real values.
+sdk.dir=/absolute/path/to/Android/sdk

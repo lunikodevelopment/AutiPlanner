@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node -e \"console.log('ics: round-trip tests are roadmap phase 1')\""
+    "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@autiplanner/core": "workspace:*"

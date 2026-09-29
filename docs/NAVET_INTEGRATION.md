@@ -2,6 +2,45 @@
 
 AutiPlanner is intended to appear as a custom routine/calendar experience in Navet without turning shared Navet UI into Home Assistant-specific code.
 
+## What this repository provides
+
+`apps/navet-extension` holds the AutiPlanner-owned pieces:
+
+| Path | Purpose |
+|---|---|
+| `src/capability/types.ts` | `RoutineView`, `RoutineProvider`, `RoutineCommandResult` |
+| `src/capability/agenda.ts` | day-part grouping, outcome controls, summaries |
+| `src/homeassistant/index.ts` | Home Assistant adapter over a narrow transport |
+
+`src/capability` may import `@autiplanner/core` for the four-state domain types
+and nothing else. It must not import React, Navet, or a provider SDK.
+`src/homeassistant` is the only module that knows AutiPlanner service names and
+websocket frame types.
+
+## Command result contract
+
+`RoutineProvider` methods resolve to `RoutineCommandResult`, never a boolean:
+
+```ts
+type RoutineCommandResult =
+  | { ok: true; item: RoutineView }
+  | { ok: false; code: "conflict" | "not-found" | "invalid" | "unavailable"; message?: string };
+```
+
+A widget should reconcile with `item` after a successful command and roll the row
+back when `code` is `conflict`. Home Assistant remains the only writer.
+
+## Interaction rules
+
+`outcomeControls(current)` returns the four states with a spoken label, a 48px
+minimum target, and the next state a tap applies:
+
+- `completed` is the only single-tap action;
+- `missed` and `skipped` are `destructive` and belong behind a confirmation;
+- the current state's control resets to `pending`, so a mis-tap is reversible.
+
+Do not let a widget collapse these into a single checkbox.
+
 ## Upstream relationship
 
 Upstream: `https://github.com/awesomestvi/navet`

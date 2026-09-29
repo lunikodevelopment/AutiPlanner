@@ -1,2 +1,5 @@
 packages:
   - "packages/*"
+  - "apps/navet-extension"
+allowBuilds:
+  esbuild: true

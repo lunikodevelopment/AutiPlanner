@@ -90,12 +90,43 @@ Initial command vocabulary:
 - `create(item)`
 - `update(uid, patch)`
 - `delete(uid)`
+- `addSeries(template)`
 
-Commands should be idempotent where practical. State-changing APIs should return the resulting item, not merely `true`.
+Commands are idempotent where practical. State-changing APIs return the
+resulting item, not merely `true`, so a client can confirm the outcome that was
+actually stored instead of assuming success.
+
+### `update` patches and clearing
+
+A patch field replaces the value. `null` clears an optional field. Omitted
+fields are unchanged. `uid` cannot be patched.
+
+### Optimistic concurrency
+
+Every mutation accepts an optional `expectedRevision` (`expected_revision` in
+Home Assistant). When it does not match the stored `revision`, the command fails
+with a conflict and writes nothing. The stored item is authoritative; the client
+asks the user whether to retry. There are no automatic merge rules.
+
+## 7.1 Recurrence
+
+Recurring routines use standard `RRULE` on a series master, not cloned future
+records. The supported subset is `FREQ=DAILY|WEEKLY|MONTHLY`, `INTERVAL`,
+`COUNT`, `UNTIL`, and `BYDAY` for weekly.
+
+An occurrence is identified as `<series-uid>:<date>` and carries `RECURRENCE-ID`
+and `X-AUTIPLANNER-ROUTINE-ID`. Completing one occurrence materializes only that
+occurrence. The series master is never completed.
+
+Expansion happens per requested window and is capped at 366 days. A wider
+request is an error, not a silent truncation.
 
 ## 8. Concurrency
 
-The Home Assistant persistence layer should eventually use an in-process mutation lock plus atomic replacement of the ICS file. A future revision field can provide optimistic concurrency for offline Android edits.
+The Home Assistant store serializes mutations behind a single in-process lock and
+replaces the ICS file atomically, so a crash cannot leave a truncated calendar.
+`X-AUTIPLANNER-REVISION` provides optimistic concurrency: a command that
+supplies a stale revision is rejected without writing.
 
 Do not add multi-writer filesystem synchronization as a shortcut.
 
@@ -125,3 +156,26 @@ Accepted. Pending/completed/missed/skipped are distinct domain values.
 ### ADR-004 — Home Assistant as synchronization boundary
 
 Accepted for the initial architecture. Revisit only if a future offline-first requirement proves it insufficient.
+
+### ADR-005 — Persist the local calendar date
+
+Accepted. The local day is `X-AUTIPLANNER-DATE`. Writers always emit it. Readers prefer it and derive a date from `DTSTART`, `DUE`, or `DTEND` only when it is absent. Derivation is a fallback for external files, not permission to infer day part from the clock.
+
+### ADR-006 — Agenda sensors, not a to-do entity
+
+Accepted. Home Assistant's `TodoItem` only models `NEEDS_ACTION` or `COMPLETED`,
+which cannot represent a missed or skipped routine item. AutiPlanner therefore
+exposes the four-state agenda through sensors and a read-only calendar entity,
+and keeps mutations in its own services. Forcing a to-do entity would require
+storing missed or skipped as completed or as an error.
+
+### ADR-007 — Bounded recurrence expansion
+
+Accepted. Series expand per requested window, capped at 366 days. A wider request
+returns an error. Cloning an unbounded future calendar is not an option.
+
+### ADR-008 — No automatic conflict merge
+
+Accepted. A revision conflict is surfaced to the user with the stored item. There
+are no deterministic merge rules, because an automatic merge of four-state
+outcomes would have to guess which outcome the household intended.

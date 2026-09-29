@@ -12,6 +12,10 @@ Before changing code, read:
 
 For Navet work, also read `docs/NAVET_INTEGRATION.md` and the upstream Navet `AGENTS.md` plus the files it marks as required.
 
+## Repository layout note
+
+The Home Assistant integration lives at `custom_components/autiplanner/` in the repository root, because HACS requires `custom_components/<domain>` there. Setup instructions are in `SETUP.md`; the integration's own notes are in `docs/INTEGRATION.md`.
+
 ## Product invariant
 
 AutiPlanner is a routine planner organized by date and explicit day parts. A routine item can be pending, completed, missed, or skipped. The UI must never collapse those four meanings into a single boolean.
@@ -68,6 +72,9 @@ Do not vendor or copy upstream Navet into this repository unless the task explic
 
 ## Home Assistant boundary
 
+The integration lives at `custom_components/autiplanner/` in the repository root
+so HACS can install it. `SETUP.md` is the user-facing guide.
+
 When implementing the custom integration:
 
 - Verify entity/service behavior against current official Home Assistant developer documentation.
@@ -75,6 +82,9 @@ When implementing the custom integration:
 - Keep richer AutiPlanner outcome/day-part data available through integration-owned commands/data rather than forcing it into unrelated HA fields.
 - Serialize writes so two clients cannot concurrently corrupt the ICS store.
 - Use atomic file replacement or an equivalent safe storage strategy.
+- Keep the command layer (`commands.py`, `api.py`, `paths.py`, `pairing.py`) free of Home Assistant imports so it stays testable without Home Assistant installed.
+- Pairing codes are a credential. They must stay short-lived, single-use, high-entropy, and minted only from an authenticated service call. Token minting must degrade to "unavailable" rather than breaking integration setup.
+- Never log a pairing code or an issued token.
 
 ## Definition of done for feature work
 

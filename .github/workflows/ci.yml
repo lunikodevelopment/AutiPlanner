@@ -67,7 +67,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      # GitHub's runner image already provides the Android SDK, so no setup
+      # action is needed. `android-actions/setup-android` was removed because it
+      # runs sdkmanager for the legacy `tools` package, which no longer exists
+      # and failed the job before Gradle ever ran.
+      - name: Point Gradle at the preinstalled SDK
+        run: echo "ANDROID_SDK_ROOT=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
       # Compiling from a clean checkout is what proves every source file is
       # published. The app previously could not build because its `data`
       # package was excluded from the repository.

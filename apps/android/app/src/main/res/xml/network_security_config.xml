@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home Assistant is very commonly reachable over plain HTTP on a local network,
+  for example http://192.168.11.114:8123, because a household usually has no
+  certificate for an internal address.
+
+  Android blocks cleartext HTTP by default from API 28 onwards. Without this
+  policy the app cannot reach a local instance at all: OkHttp raises
+  "CLEARTEXT communication not permitted by network security policy" before any
+  request is sent.
+
+  Cleartext is therefore permitted, but the app only ever talks to the address
+  the household enters in setup, and no routine data is fetched from anywhere
+  else. Prefer an https address when the instance has a certificate.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

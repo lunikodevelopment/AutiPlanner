@@ -117,9 +117,13 @@ A useful next Codex task is:
 
 > Read AGENTS.md, docs/ARCHITECTURE.md, docs/ICS_PROFILE.md, and docs/ROADMAP.md. Add the Android create/edit/delete screens and a local read cache, or extend the ICS profile. Keep all mutations routed through Home Assistant.
 
+## License
+
+AutiPlanner is released under the MIT License. See [`LICENSE`](LICENSE).
+
 ## Navet licensing boundary
 
-Navet is an upstream dependency/integration target and is not vendored into this initial repository. Navet currently identifies itself as AGPL-3.0. If you later copy or modify Navet source, keep those derivative portions compliant with Navet's license and preserve the relevant notices. This repository does not attempt to relicense upstream Navet code.
+Navet is an upstream dependency/integration target and is not vendored into this repository. Navet currently identifies itself as AGPL-3.0. If you later copy or modify Navet source, keep those derivative portions compliant with Navet's license and preserve the relevant notices. This repository does not attempt to relicense upstream Navet code, and the MIT license above applies only to AutiPlanner's own source.
 
 ## Status
 

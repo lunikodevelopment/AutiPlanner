@@ -2,6 +2,7 @@
   "name": "autiplanner",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "description": "Accessibility-first routine planning contracts and integrations.",
   "packageManager": "pnpm@11.0.0",
   "engines": {

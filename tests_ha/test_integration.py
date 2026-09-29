@@ -165,6 +165,27 @@ async def test_revision_conflict_does_not_write(hass: HomeAssistant, tmp_path) -
     assert item["status"] == "pending"
 
 
+async def test_legacy_entry_without_file_path_is_repaired(
+    hass: HomeAssistant, tmp_path, monkeypatch
+) -> None:
+    """An entry from an older build has no `file_path`.
+
+    Reading it directly raised KeyError inside async_setup_entry, which surfaced
+    as "Error setting up entry AutiPlanner" and stopped every entity loading.
+    """
+    monkeypatch.setattr(hass.config, "config_dir", str(tmp_path))
+    entry = MockConfigEntry(domain=DOMAIN, version=1, data={"calendar_name": "Routine"})
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.data["file_path"] == str(tmp_path / "autiplanner" / "routine.ics")
+    assert entry.version == 2
+    assert (tmp_path / "autiplanner" / "routine.ics").exists()
+    assert hass.states.get("sensor.routine_agenda") is not None
+
+
 async def test_http_routes_are_registered(hass: HomeAssistant, tmp_path) -> None:
     """The app talks to these three routes.
 

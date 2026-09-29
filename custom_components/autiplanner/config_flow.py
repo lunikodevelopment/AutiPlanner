@@ -42,7 +42,8 @@ def _problems(value: str) -> dict[str, str]:
 class AutiPlannerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Choose a local ICS file for the household routine calendar."""
 
-    VERSION = 1
+    #: Bumping this triggers async_migrate_entry for older entries.
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None

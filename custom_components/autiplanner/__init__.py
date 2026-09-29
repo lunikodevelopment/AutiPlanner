@@ -18,6 +18,7 @@ from .const import (
     ATTR_DAY_PART,
     ATTR_EXPECTED_REVISION,
     ATTR_UID,
+    CONF_CALENDAR_NAME,
     CONF_FILE_PATH,
     DOMAIN,
     PLATFORMS,
@@ -33,6 +34,7 @@ from .const import (
 )
 from .commands import apply_command
 from .model import DAY_PARTS
+from .paths import default_calendar_path
 from .pairing import PairingRegistry
 from .store import RoutineError, RoutineStore
 
@@ -209,8 +211,48 @@ def _service_schema(name: str) -> vol.Schema:
     )
 
 
+CONFIG_ENTRY_VERSION = 2
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Repairs entries created before the calendar path was stored.
+
+    An entry from an older build has no `file_path`, and reading it directly
+    raised KeyError during setup, which stopped the whole integration from
+    loading. The path is filled in with the default location; the household can
+    change it afterwards in the integration options.
+    """
+    if entry.version > CONFIG_ENTRY_VERSION:
+        _LOGGER.error(
+            "AutiPlanner cannot downgrade config entry %s from version %s",
+            entry.entry_id,
+            entry.version,
+        )
+        return False
+
+    if entry.version < 2:
+        data = dict(entry.data)
+        data.setdefault(CONF_CALENDAR_NAME, "Routine")
+        if not data.get(CONF_FILE_PATH):
+            data[CONF_FILE_PATH] = default_calendar_path(hass.config.config_dir)
+            _LOGGER.warning(
+                "AutiPlanner config entry %s had no calendar path; using %s. "
+                "Change it in the integration options if that is not the file you want.",
+                entry.entry_id,
+                data[CONF_FILE_PATH],
+            )
+        hass.config_entries.async_update_entry(entry, data=data, version=CONFIG_ENTRY_VERSION)
+
+    return True
+
+
+def calendar_path(entry: ConfigEntry, hass: HomeAssistant) -> str:
+    """The calendar file for an entry, falling back to the default location."""
+    return entry.data.get(CONF_FILE_PATH) or default_calendar_path(hass.config.config_dir)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    store = RoutineStore(entry.data[CONF_FILE_PATH])
+    store = RoutineStore(calendar_path(entry, hass))
     try:
         await hass.async_add_executor_job(store.load)
     except OSError as error:  # pragma: no cover - filesystem failure
